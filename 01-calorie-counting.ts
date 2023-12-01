@@ -1,30 +1,32 @@
 #!/usr/bin/env ts-node
 
-function groupAnagrams(strs: string[]): string[][] {
-  const groups: Map<string, Array<string>> = new Map()
-  for (let word of strs) {
-    const key = letterCountString(word)
-    let group = groups.get(key);
-    if (!group) {
-      group = []
-      groups.set(key, group)
+import fs from 'node:fs/promises'
+
+async function main() {
+  const file = await fs.open('./assets/01-calorie-counting.txt')
+
+  let tally = 0
+  let counts = [0, 0, 0];
+  function checkTally() {
+    if (tally > counts[2]) {
+        counts[3] = tally;
+        counts.sort();
+        counts.reverse();
+        delete counts[3];
     }
-    group.push(word)
   }
 
-  return Array.from(groups.values())
-};
-
-const offset = 'a'.charCodeAt(0);
-function letterCountString(word: string): string {
-  const array = Array.from({length: 26}, () => 0);
-
-  for (let w of word) {
-    const index = w.charCodeAt(0) - offset
-    array[index] += 1
+  for await (const line of file.readLines()) {
+    if (line === '') {
+      checkTally();
+      tally = 0
+    }
+    else {
+      tally += parseInt(line)
+    }
   }
-  return array.join(',')
+  checkTally();
+
+  console.log("result", counts[0] + counts[1] + counts[2]);
 }
-
-console.log(groupAnagrams(["bdddddddddd","bbbbbbbbbbc"]))
-
+main();
