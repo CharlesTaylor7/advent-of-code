@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 async function main(part: 1 | 2) {
-  const file = await fs.open(path.join(__dirname, 'example.txt'))
+  const file = await fs.open(path.join(__dirname, 'input.txt'))
 
   let gen = part === 1 ? part1() : part2();
   gen.next();
@@ -52,14 +52,8 @@ function* part1(): Generator<unknown, unknown, string> {
         )
       // console.log({line, match, currentMonkey})
     } else if (match = line.match(/Test: divisible by (\d+)$/)) {
-      const [x,op,y] = match[1].split(' ');
-      const operation: Op = op === '+' ? (a, b) => a + b : (a, b) => a * b;
+      currentMonkey.testModulus = Number(match[1])
 
-      currentMonkey.operation = 
-        (old) => operation(
-          x === 'old' ? old : Number(x), 
-          y === 'old' ? old : Number(y), 
-        )
     } else if (match = line.match(/If true: throw to monkey (\d+)$/)) {
       currentMonkey.ifTrueMonkeyId = Number(match[1])
 
@@ -97,7 +91,6 @@ function simulate(monkeys: Monkey[]) {
   for (let monkey of monkeys) {
     mostActivity.push(monkey.inspections)
     mostActivity.sort()
-    mostActivity.reverse()
     mostActivity.splice(2)
   }
   return mostActivity[0] * mostActivity[1];
