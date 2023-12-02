@@ -2,25 +2,22 @@
 
 import fs from 'node:fs/promises'
 
-async function part1() {
-  const file = await fs.open('./08-example.txt')
+async function main() {
+  const file = await fs.open('./08.txt')
 
   const grid: number[][] = []
   for await (const line of file.readLines()) {
     grid.push(line.split("").map(Number));
   }
-  console.log(grid)
-  countVisible(grid)
+  part2(grid)
 }
 
-function countVisible(grid: number[][]) {
-  console.log(grid.join("\n"))
+function part1(grid: number[][]) {
+  //console.log(grid)
   const height = grid.length;
   const width = grid[0].length;
 
-  let borderCount = 2 * height + 2 * width - 4;
   let set: Set<number> = new Set();
-
   const include = (i: number, j: number)  => set.add(j * width + i);
 
   let max = -1;
@@ -30,6 +27,7 @@ function countVisible(grid: number[][]) {
     max = -1;
     for (let i = 0; i < width; i++) {
       if (grid[j][i] > max) {
+        max = grid[j][i];
         console.log("ltr", {i, j}, grid[j][i])
         include(i, j);
       }
@@ -38,7 +36,8 @@ function countVisible(grid: number[][]) {
     // right to left
     max = -1;
     for (let i = width - 1; i > 0; i--) {
-      if (grid[j][i] > grid[j][i + 1]) {
+      if (grid[j][i] > max) {
+        max = grid[j][i]
         console.log("rtl", {i, j}, grid[j][i])
         include(i, j);
       }
@@ -49,8 +48,9 @@ function countVisible(grid: number[][]) {
   for (let i = 1; i < width; i++) {
     // top to bottom
     max = -1;
-    for (let j = 1; j < height; j++) {
-      if (grid[j][i] > grid[j-1][i]) {
+    for (let j = 0; j < height; j++) {
+      if (grid[j][i] > max) {
+        max = grid[j][i]
         console.log("ttb", {i, j}, grid[j][i])
         include(i, j);
       }
@@ -58,15 +58,85 @@ function countVisible(grid: number[][]) {
 
     // bottom to top
     max = -1;
-    for (let j = height - 2; j > 0; j--) {
-      if (grid[j][i] > grid[j + 1][i]) {
+    for (let j = height - 1; j > 0; j--) {
+      if (grid[j][i] > max) {
+        max = grid[j][i]
         console.log("btt", {i, j}, grid[j][i])
         include(i, j);
       }
     }
   }
 
-  console.log(borderCount , set.size);
+  console.log(set.size);
 }
 
-part1();
+function part2 (grid: number[][]) {
+
+      console.log(grid)
+  const height = grid.length;
+  const width = grid[0].length;
+
+  let maxScore = 0;
+
+  for (let j = 1; j < height - 1; j++) {
+    for (let i = 1; i < width - 1; i++) {
+      // to the left
+      let d1 = 0;
+      for (let k = i - 1; k >= 0; k--) {
+        if (grid[j][i] > grid[j][k]) {
+          d1++
+        }
+        else {
+          d1++
+          break
+        }
+      }
+
+      // to the right
+      let d2 = 0;
+      for (let k = i+1; k < width; k++) {
+        if (grid[j][i] > grid[j][k]) {
+          d2++
+        }
+        else {
+          d2++
+          break
+        }
+      }
+
+      // downward
+      let d3 = 0;
+      for (let k = j+1; k < height; k++) {
+        if (grid[j][i] > grid[k][i]) {
+          d3++
+        }
+        else {
+          d3++
+          break
+        }
+      }
+
+      // upward
+      let d4 = 0;
+      for (let k = j-1; k >= 0; k--) {
+        if (grid[j][i] > grid[k][i]) {
+          d4++
+        }
+        else {
+          d4++
+          break
+        }
+      }
+
+      const score = d1 * d2 * d3 * d4
+      console.log({i,j,score, d1,d2,d3,d4})
+      if (score > maxScore) {
+        maxScore = score
+      }
+    }
+  }
+
+  console.log(maxScore)
+}
+
+main();
