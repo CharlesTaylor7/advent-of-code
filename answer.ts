@@ -29,7 +29,17 @@ async function main() {
     }
   ).then(res => res.text())
 
-  const main = HtmlParser.parse(page).querySelector('main')!;
+  let main = HtmlParser.parse(page).querySelector('main')!;
+  console.log(main.text)
+
+
+
+  const intro = await fetch(
+    `https://adventofcode.com/${year}/day/${day}`,
+    { headers: { cookie } },
+  ).then(res => res.text())
+  main = HtmlParser.parse(intro).querySelector('main')!;
+
   console.log(main.text)
 }
 

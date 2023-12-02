@@ -16,6 +16,7 @@ async function main() {
 
   const intro = await fetch(
     `${baseUrl}`,
+    { headers: { cookie } },
   ).then(res => res.text())
   const main = HtmlParser.parse(intro).querySelector('main')!;
 
