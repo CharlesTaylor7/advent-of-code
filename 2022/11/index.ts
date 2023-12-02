@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 async function main(part: 1 | 2) {
-  const file = await fs.open(path.join(__dirname, 'input.txt'))
+  const file = await fs.open(path.join(__dirname, 'example.txt'))
 
   let gen = part === 1 ? part1() : part2();
   gen.next();
