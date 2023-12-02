@@ -110,7 +110,7 @@ function simulate(monkeys: Monkey[]) {
 
   for (let monkey of monkeys) {
     mostActivity.push(monkey.inspections)
-    mostActivity.sort()
+    mostActivity.sort((a, b) => b - a)
     mostActivity.splice(2)
   }
   return mostActivity[0] * mostActivity[1];
