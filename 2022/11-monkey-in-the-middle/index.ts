@@ -15,7 +15,6 @@ async function main(part: 1 | 2) {
   if (iter.done) {
     const monkeys = iter.value;
     const func = (part === 1) ? part1 : part2;
-    console.log(monkeys.map(m => ({ id: m.id, m: m.testModulus, items: JSON.stringify(m.items.flatMap(i => i))})));
 
     func(monkeys);
     monkeyBusiness(monkeys);
@@ -23,17 +22,11 @@ async function main(part: 1 | 2) {
 }
 
 function monkeyBusiness(monkeys: Monkey[]) {
-  const mostActivity: number[] = [];
-
-  for (let monkey of monkeys) {
-    mostActivity.push(monkey.inspections)
-    mostActivity.sort((a, b) => b - a)
-    mostActivity.splice(2)
-  }
-  console.log(mostActivity);
-  console.log( mostActivity[0] * mostActivity[1]);
+  const activity: number[] = monkeys.map(m => m.inspections);
+  activity.sort((a, b) => b - a)
+  console.log(activity);
+  console.log(activity[0] * activity[1]);
 }
-
 
 type Monkey = {
   id: number,
@@ -116,7 +109,8 @@ function part1(monkeys: Monkey[]) {
           ? monkey.ifTrueMonkeyId
           : monkey.ifFalseMonkeyId
 
-          monkeys[id].items.push({ part1: worry, part2: []});
+        item.part1 = worry;
+        monkeys[id].items.push(item);
       }
       monkey.inspections += monkey.items.length;
       monkey.items = []
