@@ -5,14 +5,15 @@ import fs from 'node:fs/promises'
 async function part1() {
   const file = await fs.open('./08-example.txt')
 
-  const grid: string[] = []
+  const grid: number[][] = []
   for await (const line of file.readLines()) {
-    grid.push(line);
+    grid.push(line.split("").map(Number));
   }
+  console.log(grid)
   countVisible(grid)
 }
 
-function countVisible(grid: string[]) {
+function countVisible(grid: number[][]) {
   console.log(grid.join("\n"))
   const height = grid.length;
   const width = grid[0].length;
@@ -22,19 +23,21 @@ function countVisible(grid: string[]) {
 
   const include = (i: number, j: number)  => set.add(j * width + i);
 
-  let max = 0;
+  let max = -1;
   // row by row
-  for (let j = 1; j < height - 1; j++) {
+  for (let j = 0; j < height; j++) {
     // left to right
-    for (let i = 1; i < width - 1; i++) {
-      if (grid[j][i] > grid[j][i-1]) {
+    max = -1;
+    for (let i = 0; i < width; i++) {
+      if (grid[j][i] > max) {
         console.log("ltr", {i, j}, grid[j][i])
         include(i, j);
       }
     }
 
     // right to left
-    for (let i = width - 2; i > 0; i--) {
+    max = -1;
+    for (let i = width - 1; i > 0; i--) {
       if (grid[j][i] > grid[j][i + 1]) {
         console.log("rtl", {i, j}, grid[j][i])
         include(i, j);
@@ -43,9 +46,10 @@ function countVisible(grid: string[]) {
   }
 
   // column by column
-  for (let i = 1; i < width - 1; i++) {
+  for (let i = 1; i < width; i++) {
     // top to bottom
-    for (let j = 1; j < height - 1; j++) {
+    max = -1;
+    for (let j = 1; j < height; j++) {
       if (grid[j][i] > grid[j-1][i]) {
         console.log("ttb", {i, j}, grid[j][i])
         include(i, j);
@@ -53,6 +57,7 @@ function countVisible(grid: string[]) {
     }
 
     // bottom to top
+    max = -1;
     for (let j = height - 2; j > 0; j--) {
       if (grid[j][i] > grid[j + 1][i]) {
         console.log("btt", {i, j}, grid[j][i])
