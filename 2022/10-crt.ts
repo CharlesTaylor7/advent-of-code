@@ -1,8 +1,6 @@
 #!/usr/bin/env ts-node
 
 import fs from "node:fs/promises";
-import { exit } from "node:process";
-import { run } from "node:test";
 
 async function main(part: 1 | 2) {
   const file = await fs.open("./10.txt");
@@ -49,6 +47,35 @@ function* part1(): Generator<unknown, number, string> {
   }
 }
 
-function* part2(): Generator {}
+function* part2(): Generator<unknown, string, string> {
+  let X = 1;
+  let queue = [0];
+  let cycle = 0;
+  let line;
+  let crt: string[] = [];
+  while ((line = yield)) {
+    const match = line.match(/^addx (.*)$/);
+    if (match) {
+      queue.push(0, Number(match[1]));
+    } else {
+      queue.push(0);
+    }
+    runCycle(queue.shift() || 0);
+  }
+  for (let x of queue) {
+    runCycle(x);
+  }
 
-main(1);
+  return crt.join();
+
+  function runCycle(inc: number) {
+    if (cycle % 40 === 0) {
+      crt.push('\n')
+    }
+    X += inc;
+    crt.push(Math.abs(X - (cycle % 40)) <= 1 ? '#' : '.')
+    cycle++;
+  }
+}
+
+main(2);
