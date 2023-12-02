@@ -23,7 +23,7 @@ async function main() {
   const content = main.text
   console.log(content)
 
-  const dir = `${year}/${day}-${title}`;
+  const dir = `${year}/${day.padStart(2, '0')}-${title}`;
   await fs.mkdir(dir, {recursive: true})
   await fs.writeFile(`${dir}/intro.txt`, content)
 
