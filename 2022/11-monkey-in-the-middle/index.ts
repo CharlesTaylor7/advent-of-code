@@ -31,7 +31,7 @@ function monkeyBusiness(monkeys: Monkey[]) {
     mostActivity.splice(2)
   }
   console.log(mostActivity);
-  return mostActivity[0] * mostActivity[1];
+  console.log( mostActivity[0] * mostActivity[1]);
 }
 
 

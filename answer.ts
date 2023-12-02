@@ -15,7 +15,7 @@ async function main() {
     ['answer', answer],
   ]).toString();
   
-  const page = await fetch(
+  const answerPage = await fetch(
     `https://adventofcode.com/${year}/day/${day}/answer`,
     { 
       method: 'POST',
@@ -29,18 +29,18 @@ async function main() {
     }
   ).then(res => res.text())
 
-  let main = HtmlParser.parse(page).querySelector('main')!;
+  let main = HtmlParser.parse(answerPage).querySelector('main')!;
   console.log(main.text)
 
 
-
-  const intro = await fetch(
+  let puzzlePage = await fetch(
     `https://adventofcode.com/${year}/day/${day}`,
     { headers: { cookie } },
   ).then(res => res.text())
-  main = HtmlParser.parse(intro).querySelector('main')!;
-
-  console.log(main.text)
+  main = HtmlParser.parse(puzzlePage).querySelector('main')!;
+  const [,part2] = main.text.split('--- Part Two ---')
+  
+  console.log(part2);
 }
 
 main();
