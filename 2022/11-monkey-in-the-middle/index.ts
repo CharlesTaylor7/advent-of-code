@@ -15,6 +15,8 @@ async function main(part: 1 | 2) {
   if (iter.done) {
     const monkeys = iter.value;
     const func = (part === 1) ? part1 : part2;
+    console.log(monkeys.map(m => ({ id: m.id, m: m.testModulus, items: JSON.stringify(m.items.flatMap(i => i))})));
+
     func(monkeys);
     monkeyBusiness(monkeys);
   }
