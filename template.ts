@@ -15,7 +15,9 @@ async function main(part: 1 | 2) {
 function* part1(): Generator {
    
 }
+
 function* part2(): Generator {
+
 }
 
 main(1);
