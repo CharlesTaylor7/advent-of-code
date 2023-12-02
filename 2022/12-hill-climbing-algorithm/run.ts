@@ -26,4 +26,4 @@ function* part2(): Generator {
 
 }
 
-main();
+main(1);

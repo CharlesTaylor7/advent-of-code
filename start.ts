@@ -27,7 +27,7 @@ async function main() {
 
   const dir = `${year}/${day.padStart(2, '0')}-${title}`;
   await fs.mkdir(dir, {recursive: true})
-  await fs.writeFile(`${dir}/intro.txt`, content)
+  await fs.writeFile(`${dir}/description.txt`, content)
 
   const input = await fetch(
     `${baseUrl}/input`,
@@ -41,7 +41,7 @@ async function main() {
     await fs.writeFile(`${dir}/example.txt`, content);
   }
 
-  await fs.copyFile('template.ts', `${dir}/index.ts`, fs.constants.COPYFILE_EXCL)
+  await fs.copyFile('template.ts', `${dir}/run.ts`, fs.constants.COPYFILE_EXCL)
 }
 
 main();
