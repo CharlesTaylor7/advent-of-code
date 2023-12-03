@@ -4,6 +4,9 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 type TestCase = 'input.txt' | 'example.txt'
+
+type Gen<TReturn = undefined, TYield = undefined, TIn = string> = Generator<TYield, TReturn, TIn>
+
 async function main(part: 1 | 2 = 1, testCase: TestCase = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
@@ -14,8 +17,6 @@ async function main(part: 1 | 2 = 1, testCase: TestCase = 'example.txt') {
   }
   gen.next();
 }
-
-type Gen<TReturn = undefined, TYield = undefined, TIn = string> = Generator<TYield, TReturn, TIn>
 
 function* part1(): Gen {
   let line: string;

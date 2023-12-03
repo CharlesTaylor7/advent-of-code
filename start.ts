@@ -38,7 +38,7 @@ async function main() {
 
   const preformattedBlock = main.querySelector("pre");
   if (preformattedBlock) {
-    const content = HtmlParser.parse(preformattedBlock.rawText).querySelector('code')!.rawText;
+    const content = HtmlParser.parse(preformattedBlock.rawText).querySelector('code')!.text;
     await fs.writeFile(`${dir}/example.txt`, content);
   }
 
