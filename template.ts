@@ -14,15 +14,17 @@ async function main(part: 1 | 2 = 1, testCase: string = 'example.txt') {
   gen.next();
 }
 
-function* part1(): Generator<unknown, unknown, string> {
+type Gen<TReturn = undefined, TYield = undefined, TIn = string> = Generator<TYield, TReturn, TIn>
+
+function* part1(): Gen {
   let line: string;
-  while (line = yield) {
+  while ((line = yield) !== undefined) {
     console.log(line)
   }
   return
 }
 
-function* part2(): Generator {
+function* part2(): Gen {
 
 }
 
