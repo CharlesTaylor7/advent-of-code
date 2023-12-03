@@ -20,10 +20,11 @@ async function main() {
   ).then(res => res.text())
   const main = HtmlParser.parse(intro).querySelector('main')!;
 
-  const [, rawTitle, content] = main.text.match(/^.*--- Day \d+: (.*) ---(.*)/s)!
+  const [, rawTitle, rawBody] = main.text.match(/^.*--- Day \d+: (.*) ---(.*)/s)!
 
   const title = rawTitle.split(' ').map(w => w.toLowerCase()).join("-");
-  console.log(`\nDay ${day}: ${rawTitle}\n\n${content}`)
+  const content = `\nDay ${day}: ${rawTitle}\n\n${rawBody}`;
+  console.log(content)
 
   const dir = `${year}/${day.padStart(2, '0')}-${title}`;
   await fs.mkdir(dir, {recursive: true})
