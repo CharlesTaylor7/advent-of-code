@@ -51,7 +51,9 @@ function parse(line: string): Packet {
       rawNum = ''
     }
   }
-  for (let c of line) {
+  // skip the start and end of the line, they have to be a pair of closing and ending braces
+  for (let i = 1; i < line.length - 1; i++) {
+    const c = line[i];
     if (isNum(c)) {
       rawNum += c
     }
@@ -107,25 +109,26 @@ function isNum(c: string) {
 
 function* part2(): Gen {
   let line: string;
-  let index = 1;
-  let left: Packet | null = null
-  let right: Packet | null = null
-  let tally = 0;
+  const packets: Packet[] = []
   while ((line = yield) !== undefined) {
     if (line === '') {
-      left = null
-      right = null
-      index++;
       continue;
     }
-    const p = parse(line);    
-    if (left === null) left = p
-    else if (right === null) {
-      right = p
-      tally += compare(left, right) === 'LT' ? index : 0
-    }
+    packets.push(parse(line))
   }
-  console.log(tally)
+
+  const p2 = [[2]]
+  const p6 = [[6]]
+  let d2 = 0;
+  let d6 = 0;
+  for (let p of packets) {
+    if (compare(p, p2) === 'LT') d2++
+    else if (compare(p, p6) === 'LT') d6++
+  }
+
+  const index1 = d2 + 1;
+  const index2 = d2 + d6 + 2;
+  console.log(index1 * index2);
 }
 
-main(1, 'input.txt');
+main(2, 'input.txt');
