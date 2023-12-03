@@ -32,7 +32,8 @@ async function main() {
   let main = HtmlParser.parse(answerPage).querySelector('main')!;
   console.log(main.text)
 
-
+  if (level === "2") return
+  // fetch part 2
   let puzzlePage = await fetch(
     `https://adventofcode.com/${year}/day/${day}`,
     { headers: { cookie } },
