@@ -20,6 +20,11 @@ async function main() {
   ).then(res => res.text())
   const main = HtmlParser.parse(intro).querySelector('main')!;
 
+  // replace <pre><code> tags with just <code> tags
+  for (let node of main.querySelectorAll("pre")) {
+    node.replaceWith(HtmlParser.parse(node.rawText))
+  }
+
   const [, rawTitle, rawBody] = main.text.match(/^.*--- Day \d+: (.*) ---(.*)/s)!
 
   const title = rawTitle.split(' ').map(w => w.toLowerCase()).join("-");
@@ -36,10 +41,9 @@ async function main() {
   ).then(res => res.text())
   await fs.writeFile(`${dir}/input.txt`, input)
 
-  const preformattedBlock = main.querySelector("pre");
-  if (preformattedBlock) {
-    const content = HtmlParser.parse(preformattedBlock.rawText).querySelector('code')!.text;
-    await fs.writeFile(`${dir}/example.txt`, content);
+  const example = main.querySelector("code");
+  if (example) {
+    await fs.writeFile(`${dir}/example.txt`, example.text);
   }
 
   await fs.copyFile('template.ts', `${dir}/run.ts`, fs.constants.COPYFILE_EXCL)
