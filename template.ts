@@ -3,8 +3,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-type TestCase = 'input.txt' | 'example.txt'
-async function main(part: 1 | 2 = 1, testCase: TestCase = 'example.txt') {
+async function main(part: 1 | 2 = 1, testCase: string = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
   let gen = part === 1 ? part1() : part2();
