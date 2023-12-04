@@ -23,8 +23,9 @@ async function main() {
   // replace <pre><code> tags with just <code> tags
   let example: string | undefined;
   for (let node of main.querySelectorAll("pre")) {
-    node.replaceWith(HtmlParser.parse(node.rawText))
-    example ||= node.text
+    const codeBlock = HtmlParser.parse(node.rawText)
+    node.replaceWith(codeBlock)
+    example ||= codeBlock.text
   }
 
   const { title: rawTitle, body: rawBody} = main.text.match(
