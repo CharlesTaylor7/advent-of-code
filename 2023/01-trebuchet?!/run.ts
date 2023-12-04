@@ -39,20 +39,21 @@ async function part2(testCase: TestCase = 'example.txt') {
     'eight': 8,
     'nine': 9,
   } as Record<string, number>
-  for await (const line of file.readLines()) {
+  for await (let line of file.readLines()) {
     let first: string | undefined
     let last: string | undefined
-    let match: RegExpExecArray | null;
-    while (match = r.exec(line)) {
+    let match: RegExpMatchArray | null;
+    while (match = line.match(r)) {
+      line = line.slice(1)
       first ||= match[0] 
       last = match[0]
     }
     let tens = nameToNum[first!] ?? Number(first)
     let ones = nameToNum[last!] ?? Number(last)
-    console.log({line, first, last, tens, ones})
+    //console.log({line, first, last, tens, ones})
     tally += tens * 10 + ones
   }
   console.log(tally)
 }
 
-part2('example2.txt');
+part2('input.txt');
