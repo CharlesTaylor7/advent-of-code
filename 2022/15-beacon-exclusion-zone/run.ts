@@ -93,11 +93,9 @@ type Point = {
 
 function* perimeter(sensor: Sensor): Generator<Point> {
   const radius = sensor.d + 1
-  //for (let y = sensor.y - radius; y <= sensor.y + radius; y++) {
   console.log("sensor", sensor, "radius", radius)
   for (let dy = 0; dy <= radius; dy++) {
     const dx = radius - dy
-    //console.log({dx, dy})
     yield { x: sensor.x + dx, y: sensor.y + dy }
     yield { x: sensor.x - dx, y: sensor.y + dy }
     yield { x: sensor.x + dx, y: sensor.y - dy }
