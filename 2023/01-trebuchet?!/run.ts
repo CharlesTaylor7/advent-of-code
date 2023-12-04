@@ -27,7 +27,7 @@ async function part2(testCase: TestCase = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
   let tally = 0;
-  const r = /\d|one|two|three|four|five|six|seven|eight|nine/g
+  const r = /\d|one|two|three|four|five|six|seven|eight|nine/
   const nameToNum = {
     'one': 1,
     'two': 2,
@@ -44,13 +44,12 @@ async function part2(testCase: TestCase = 'example.txt') {
     let last: string | undefined
     let match: RegExpMatchArray | null;
     while (match = line.match(r)) {
-      line = line.slice(1)
+      line = line.slice(match.index! + 1)
       first ||= match[0] 
       last = match[0]
     }
     let tens = nameToNum[first!] ?? Number(first)
     let ones = nameToNum[last!] ?? Number(last)
-    //console.log({line, first, last, tens, ones})
     tally += tens * 10 + ones
   }
   console.log(tally)
