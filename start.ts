@@ -25,9 +25,12 @@ async function main() {
     node.replaceWith(HtmlParser.parse(node.rawText))
   }
 
-  const [, rawTitle, rawBody] = main.text.match(/^.*--- Day \d+: (.*) ---(.*)/s)!
+  const { title: rawTitle, body: rawBody} = main.text.match(
+    /--- Day \d+: (?<title>.*?) ---(?<body>.*)/s
+  )!.groups as Record<string, string>;
 
   const title = rawTitle.split(' ').map(w => w.toLowerCase()).join("-");
+  
   const content = `\nDay ${day}: ${rawTitle}\n\n${rawBody}`;
   console.log(content)
 
@@ -43,7 +46,7 @@ async function main() {
 
   const example = main.querySelector("code");
   if (example) {
-    await fs.writeFile(`${dir}/example.txt`, example.text);
+    await fs.writeFile(`${dir}/example.txt`, example!.text);
   }
 
   await fs.copyFile('template.ts', `${dir}/run.ts`, fs.constants.COPYFILE_EXCL)
