@@ -21,8 +21,10 @@ async function main() {
   const main = HtmlParser.parse(intro).querySelector('main')!;
 
   // replace <pre><code> tags with just <code> tags
+  let example: string | undefined;
   for (let node of main.querySelectorAll("pre")) {
     node.replaceWith(HtmlParser.parse(node.rawText))
+    example ||= node.text
   }
 
   const { title: rawTitle, body: rawBody} = main.text.match(
@@ -44,9 +46,8 @@ async function main() {
   ).then(res => res.text())
   await fs.writeFile(`${dir}/input.txt`, input)
 
-  const example = main.querySelector("code");
   if (example) {
-    await fs.writeFile(`${dir}/example.txt`, example!.text);
+    await fs.writeFile(`${dir}/example.txt`, example);
   }
 
   await fs.copyFile('template.ts', `${dir}/run.ts`, fs.constants.COPYFILE_EXCL)
