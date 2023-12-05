@@ -12,7 +12,6 @@ type Num = {
   colEnd: number,
 }
 
-
 async function part1(testCase: TestCase = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
@@ -72,7 +71,6 @@ async function part2(testCase: TestCase = 'example.txt') {
       for (let dx = 0; dx < match[0].length; dx++) {
         const col = match.index! + dx
         numbers[`${row},${col}`] = Number(match[0])
-        console.log(numbers)
       }
     }
     for (let match of line.matchAll(/\*/g)) {
@@ -80,6 +78,8 @@ async function part2(testCase: TestCase = 'example.txt') {
     }
     row++
   }
+  console.log(JSON.stringify(parts, (_,e) => e, 2));
+  console.log(JSON.stringify(numbers, (_,e) => e, 2))
 
   let tally = 0;
   for (let part of parts) {
