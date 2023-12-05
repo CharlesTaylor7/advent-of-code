@@ -21,7 +21,6 @@ async function main(part: 1 | 2 = 1, testCase: TestCase = 'example.txt') {
 
 type Tile = '.' | '#' | 'o'
 // grid is translated in the x direction to keep the size of the array down
-type ArrayGrid = Tile[][]
 type Cave = {
   minX: number,
   maxX: number,

@@ -3,7 +3,11 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-type TestCase = 'input.txt' | 'example.txt'
+type TestCase = 
+  'input.txt' 
+    | 'example.txt'
+    | 'example2.txt'
+
 
 type Num = {
   value: number,
@@ -46,7 +50,6 @@ async function part1(testCase: TestCase = 'example.txt') {
       }
     }
   }
-  console.log(tally)
 }
 
 function* numPerimeter(n: Num): Generator<{ row: number, col: number }> {
@@ -84,27 +87,65 @@ async function part2(testCase: TestCase = 'example.txt') {
   let tally = 0;
   for (let part of parts) {
     const nums: Set<number> = new Set()
-    for (let loc of partPerimeter(part)) {
-      const n = numbers[`${loc.row},${loc.col}`]
+    for (let point of partPerimeter(part)) {
+      const n = numbers[`${point.x},${point.y}`]
       if (n !== undefined) nums.add(n)
     }
-    if (nums.size === 2) tally += Array.from(nums).reduce((a, b) => a * b, 1)
+    if (nums.size === 2) {
+      console.log(nums)
+      const arr = Array.from(nums)
+      tally += arr[0] * arr[1];
+    }
   }
   console.log(tally)
+  console.log(tally + '\nfe\nfi\nfo\nfum\n')
 }
 
-function* partPerimeter(part: {row:number, col: number}): Generator<{ row: number, col: number }> {
+function* partPerimeter(part: {row:number, col: number}): Generator<Point> {
 
   const d = [-1,0,1]
   for (let dx of d) {
     for (let dy of d) {
       if (dx !== 0 || dy !== 0) {
-        yield { row: part.row + dx, col: part.col + dy }
+        yield { x: part.row + dx, y: part.col + dy }
       }
     }
   } 
 }
 
+// sparse grid rep
+type Grid = {
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  defaultTile: Tile,
+  data: Record<string, Tile>
+}
+type Tile = '.' | '*' 
+type Point = { x: number, y: number };
+
+function show(grid: Grid) {
+  const rows: string[] = []
+
+  for (let y = grid.minY; y <= grid.maxY; y++) {
+    const row: Tile[] = []
+    for (let x = grid.minX; x <= grid.maxX; x++) {
+      row.push(grid.data[`${x},${y}`] ?? '.')
+    }
+    rows.push(row.join(""))
+  }
+  
+  console.log(rows.join("\n"))
+}
+
+function lookup(grid: Grid, point: Point): Tile {
+  return grid.data[`${point.x},${point.y}`] ?? grid.defaultTile;
+}
+
+function update<T>(grid: Record<string, T>, point: Point, tile: T) {
+  return grid[`${point.x},${point.y}`] = tile
+}
 
 
-part2('input.txt');
+part2('example2.txt');
