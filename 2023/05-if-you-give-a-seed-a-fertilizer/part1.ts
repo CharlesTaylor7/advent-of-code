@@ -18,6 +18,15 @@ async function main(testCase: TestCase = 'example.txt') {
   let row = 0;
   let currentRules: Rule[] = []
   let currentMapping: string | undefined;
+  function applyRules() {
+      // console.log(values)
+      // console.log(currentMapping)
+      values = values.map(v => {
+        const rule = currentRules.find(rule => v >= rule.src && v < rule.src +rule.count)
+        return rule ? rule.dest + (v - rule.src) : v
+      })
+  }
+
   for await (const line of file.readLines()) {
     row++
     if (row === 1) {
@@ -28,21 +37,19 @@ async function main(testCase: TestCase = 'example.txt') {
       currentMapping = line
       currentRules = []
     }
-    else if (!line) {
-      // apply rules
-      values = values.map(v => {
-        const rule = currentRules.find(rule => v >= rule.src && v < rule.src +rule.count)
-        return rule ? rule.dest + (v - rule.src) : v
-      })
+    else if (!line && currentRules.length) {
+      applyRules()
     }
     else {
       const [dest, src, count] = line.split(/\s+/).map(Number)
       currentRules.push({src, dest, count})
     }
   }
+  applyRules()
+  // console.log(values)
 
   values.sort((a,b) => a - b);
-  console.log(values);
+  console.log(values[0])
 }
 
-main('example.txt');
+main('input.txt');
