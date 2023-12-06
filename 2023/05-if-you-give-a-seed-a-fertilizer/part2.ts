@@ -22,29 +22,22 @@ type Range = {
 function splitRange(range: Range, sortedRules: Rule[]): Range[] {
   const mappedRanges: Range[] = []
   
-  const copy = {...range};
   for (let rule of sortedRules) {
     if (range.start === range.end) break;
     if (range.start >= rule.src + rule.count) continue;
     else if (range.start >= rule.src) {
-      // console.log(`splitting range`, range);
-      // console.log(`on rule`, rule)
       const delta = range.start - rule.src;
       const start = rule.dest + delta
       const mapped = {
-        ...range,
         start,
         end: 
           Math.min(start + range.end - range.start, rule.dest + rule.count)
       }
-      // console.log(`mapped`, mapped)
       mappedRanges.push(mapped)
       range.start += mapped.end - mapped.start
-      // console.log(`new start`, range.start)
     }
     else if (range.end > rule.src) {
       mappedRanges.push({
-        ...range,
         start: range.start,
         end: rule.src
       })
@@ -57,24 +50,6 @@ function splitRange(range: Range, sortedRules: Rule[]): Range[] {
   if (range.start < range.end) {
     mappedRanges.push(range)
   }
-  if ((range as any)[''] !== undefined) {
-    console.log("rules", sortedRules)
-    console.log("before", copy)
-    console.log("mapped", mappedRanges)
-  }
-
-  // check invariants
-  let tally = 0;
-  for (let range of mappedRanges) {
-    if (range.start >= range.end) {
-      throw new Error("invalid range")
-    }
-    tally += range.end - range.start
-  }
-  if (tally !== copy.end - copy.start) {
-    throw new Error("split ranges do not sum to original size")
-  }
-
   return mappedRanges;
 }
 
@@ -87,7 +62,6 @@ async function main(testCase: TestCase = 'example.txt') {
   let currentMapping: string | undefined;
 
   function applyRules() {
-    console.log(currentMapping)
     currentRules.sort((a,b) => a.src - b.src);
     ranges = ranges.flatMap(range => splitRange(range, currentRules))
   }
@@ -101,10 +75,7 @@ async function main(testCase: TestCase = 'example.txt') {
         ranges.push({ 
           start: seedCounts[i], 
           end: seedCounts[i] + seedCounts[i + 1],
-          // @ts-ignore
-          ['']: seedCounts[i] === 79 ? '' : undefined,
         });
-      
       }
     }
     else if (line.match(/map:$/)) {
@@ -120,12 +91,10 @@ async function main(testCase: TestCase = 'example.txt') {
     }
   }
   applyRules()
-  // console.log(values)
 
-  console.log(ranges)
+  console.log(ranges.length)
   ranges.sort((a,b) => a.start - b.start);
   console.log(ranges[0]?.start)
-  console.log("fe\nfi\nfo\nfum\n\n")
 }
 
 main('input.txt');
