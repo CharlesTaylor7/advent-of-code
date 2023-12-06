@@ -34,14 +34,15 @@ async function main() {
 
   if (level === "2") return
   // fetch part 2
-  let puzzlePage = await fetch(
+  let html = await fetch(
     `https://adventofcode.com/${year}/day/${day}`,
     { headers: { cookie } },
   ).then(res => res.text())
-  main = HtmlParser.parse(puzzlePage).querySelector('main')!;
-  const [,part2] = main.text.split('--- Part Two ---')
+  let page = HtmlParser.parse(html);
+
+  const [,part2] = page.querySelectorAll('article.day-desc');
   
-  console.log(part2);
+  console.log(part2?.text);
 }
 
 main();
