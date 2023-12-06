@@ -4,24 +4,19 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 type TestCase = 'input.txt' | 'example.txt'
-// max speed after n seconds
 
 async function main(testCase: TestCase = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
 
-  const nums: number[][] = []
+  const nums: number[] = []
   for await (const line of file.readLines()) {
-    nums.push(Array.from(line.matchAll(/\d+/g)!, Number))
+    nums.push(Number(Array.from(line.matchAll(/\d+/g)).join("")))
   }
 
-  let times = nums[0]
-  let distances = nums[1]
-  let product = 1;
-  for (let i = 0; i < times.length; i++) {
-    product *= countWaysToWin(times[i], distances[i]);
-  }
-  console.log(product)
+  let time = nums[0]
+  let distance = nums[1]
+  console.log(countWaysToWin(time, distance))
 }
 
 // const cache = []
