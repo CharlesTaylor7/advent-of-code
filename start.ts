@@ -51,7 +51,7 @@ async function main() {
     await fs.writeFile(`${dir}/example.txt`, example);
   }
 
-  await fs.copyFile('template.ts', `${dir}/run.ts`, fs.constants.COPYFILE_EXCL)
+  await fs.copyFile('template.ts', `${dir}/part1.ts`, fs.constants.COPYFILE_EXCL)
 }
 
 main();
