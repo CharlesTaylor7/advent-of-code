@@ -34,8 +34,8 @@ function splitRange(range: Range, sortedRules: Rule[]): Range[] {
       const mapped = {
         ...range,
         start,
-        end: start + 
-          Math.min(range.end - range.start, rule.dest + rule.count)
+        end: 
+          Math.min(start + range.end - range.start, rule.dest + rule.count)
       }
       // console.log(`mapped`, mapped)
       mappedRanges.push(mapped)
@@ -51,7 +51,6 @@ function splitRange(range: Range, sortedRules: Rule[]): Range[] {
       range.start = rule.src
     }
     else {
-      mappedRanges.push(range);
       break;
     }
   }
@@ -100,10 +99,10 @@ async function main(testCase: TestCase = 'example.txt') {
       const seedCounts = seeds.split(/\s+/).map(Number)
       for (let i = 0; i < seedCounts.length; i += 2) {
         ranges.push({ 
+          start: seedCounts[i], 
+          end: seedCounts[i] + seedCounts[i + 1],
           // @ts-ignore
           ['']: seedCounts[i] === 79 ? '' : undefined,
-          start: seedCounts[i], 
-          end: seedCounts[i] + seedCounts[i + 1]
         });
       
       }
@@ -129,4 +128,4 @@ async function main(testCase: TestCase = 'example.txt') {
   console.log("fe\nfi\nfo\nfum\n\n")
 }
 
-main('example.txt');
+main('input.txt');
