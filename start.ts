@@ -46,8 +46,8 @@ async function main() {
 
   let content = `\nDay ${day}: ${rawTitle}\n\n${part1.text}`;
   if (part2) {
-    part2?.querySelector("h2")!.remove();
-    content += `\n\nPart 2: ${part2.text}`
+    part2.querySelector("h2")!.remove();
+    content += `\n\nPart 2\n\n${part2.text}`
   }
    
   console.log(content)
