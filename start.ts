@@ -18,23 +18,38 @@ async function main() {
     `${baseUrl}`,
     { headers: { cookie } },
   ).then(res => res.text())
-  const main = HtmlParser.parse(intro).querySelector('main')!;
+  const page = HtmlParser.parse(intro);
 
   // replace <pre><code> tags with just <code> tags
   let example: string | undefined;
-  for (let node of main.querySelectorAll("pre")) {
+  for (let node of page.querySelectorAll("pre")) {
     const codeBlock = HtmlParser.parse(node.rawText)
     node.replaceWith(codeBlock)
     example ||= codeBlock.text
   }
 
-  const { title: rawTitle, body: rawBody} = main.text.match(
-    /--- Day \d+: (?<title>.*?) ---(?<body>.*)/s
-  )!.groups as Record<string, string>;
+  const sections = page.querySelectorAll("article.day-desc")
 
-  const title = rawTitle.split(' ').map(w => w.toLowerCase()).join("-");
-  
-  const content = `\nDay ${day}: ${rawTitle}\n\n${rawBody}`;
+  const part1 = sections[0]
+  const part2 = sections[1]
+
+  const header = part1.querySelector("h2")!.remove();
+  const rawTitle = 
+    header
+    .rawText
+    .match(/--- Day \d+: (.*?) ---/)![1]
+
+  const title = rawTitle 
+    .split(' ')
+    .map(w => w.toLowerCase())
+    .join("-");
+
+  let content = `\nDay ${day}: ${rawTitle}\n\n${part1.text}`;
+  if (part2) {
+    part2?.querySelector("h2")!.remove();
+    content += `\n\nPart 2: ${part2.text}`
+  }
+   
   console.log(content)
 
   const dir = `${year}/${day.padStart(2, '0')}-${title}`;
