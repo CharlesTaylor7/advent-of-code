@@ -27,13 +27,23 @@ async function main(testCase: TestCase = 'example.txt') {
   function applyRules() {
       // console.log(values)
       // console.log(currentMapping)
-    
-      /*
-      ranges = ranges.map(v => {
-        const rule = currentRules.find(rule => v >= rule.src && v < rule.src +rule.count)
-        return rule ? rule.dest + (v - rule.src) : v
+      currentRules.sort((a,b) => a.src - b.src);
+      ranges = ranges.flatMap(range => {
+        const mappedRanges: Range[] = []
+        
+        for (let rule of currentRules) {
+          if (range.start >= rule.src && range.start < rule.src + rule.count) {
+            const start = rule.dest + (range.start - rule.src);
+            mappedRanges.push({
+              start,
+              count: Math.min(rule.count, range.count),
+            })
+          }
+        }
+        return mappedRanges;
+        // const rule = currentRules.find(rule => v >= rule.src && v < rule.src +rule.count)
+        // return rule ? rule.dest + (v - rule.src) : v
       })
-      */
   }
 
   for await (const line of file.readLines()) {
