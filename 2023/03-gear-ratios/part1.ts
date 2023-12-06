@@ -4,9 +4,9 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 type TestCase = 
-  'input.txt' 
-    | 'example.txt'
-    | 'example2.txt'
+  | 'input.txt' 
+  | 'example.txt'
+  | 'example2.txt'
 
 
 type Num = {
@@ -50,6 +50,7 @@ async function part1(testCase: TestCase = 'example.txt') {
       }
     }
   }
+  console.log(tally)
 }
 
 function* numPerimeter(n: Num): Generator<{ row: number, col: number }> {
@@ -66,23 +67,23 @@ async function part2(testCase: TestCase = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
   const numbers: Record<string, number> = {}
-  const parts: { row: number, col: number }[] = []
+  const parts: { y: number, x: number }[] = []
   
-  let row = 0;
+  let y = 0;
   for await (const line of file.readLines()) {
     for (let match of line.matchAll(/\d+/g)) {
       for (let dx = 0; dx < match[0].length; dx++) {
-        const col = match.index! + dx
-        numbers[`${row},${col}`] = Number(match[0])
+        const x = match.index! + dx
+        numbers[`${x},${y}`] = Number(match[0])
       }
     }
-    for (let match of line.matchAll(/\*/g)) {
-      parts.push({ row, col: match.index!});
+    for (let match of line.matchAll(/[^\d\.]/g)) {
+      parts.push({ y, x: match.index!});
     }
-    row++
+    y++
   }
-  console.log(JSON.stringify(parts, (_,e) => e, 2));
-  console.log(JSON.stringify(numbers, (_,e) => e, 2))
+  //console.log(JSON.stringify(parts, (_,e) => e, 2));
+  //console.log(JSON.stringify(numbers, (_,e) => e, 2))
 
   let tally = 0;
   for (let part of parts) {
@@ -101,51 +102,20 @@ async function part2(testCase: TestCase = 'example.txt') {
   console.log(tally + '\nfe\nfi\nfo\nfum\n')
 }
 
-function* partPerimeter(part: {row:number, col: number}): Generator<Point> {
+function* partPerimeter(part: Point): Generator<Point> {
 
   const d = [-1,0,1]
   for (let dx of d) {
     for (let dy of d) {
       if (dx !== 0 || dy !== 0) {
-        yield { x: part.row + dx, y: part.col + dy }
+        yield { x: part.x + dx, y: part.y + dy }
       }
     }
   } 
 }
 
-// sparse grid rep
-type Grid = {
-  minX: number,
-  maxX: number,
-  minY: number,
-  maxY: number,
-  defaultTile: Tile,
-  data: Record<string, Tile>
-}
-type Tile = '.' | '*' 
 type Point = { x: number, y: number };
 
-function show(grid: Grid) {
-  const rows: string[] = []
-
-  for (let y = grid.minY; y <= grid.maxY; y++) {
-    const row: Tile[] = []
-    for (let x = grid.minX; x <= grid.maxX; x++) {
-      row.push(grid.data[`${x},${y}`] ?? '.')
-    }
-    rows.push(row.join(""))
-  }
-  
-  console.log(rows.join("\n"))
-}
-
-function lookup(grid: Grid, point: Point): Tile {
-  return grid.data[`${point.x},${point.y}`] ?? grid.defaultTile;
-}
-
-function update<T>(grid: Record<string, T>, point: Point, tile: T) {
-  return grid[`${point.x},${point.y}`] = tile
-}
 
 
-part2('example2.txt');
+part1('input.txt');
