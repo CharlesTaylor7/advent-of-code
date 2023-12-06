@@ -19,6 +19,66 @@ type Range = {
   end: number,
 }
 
+function splitRange(range: Range, sortedRules: Rule[]): Range[] {
+  const mappedRanges: Range[] = []
+  
+  const copy = {...range};
+  for (let rule of sortedRules) {
+    if (range.start === range.end) break;
+    if (range.start >= rule.src + rule.count) continue;
+    else if (range.start >= rule.src) {
+      // console.log(`splitting range`, range);
+      // console.log(`on rule`, rule)
+      const delta = range.start - rule.src;
+      const start = rule.dest + delta
+      const mapped = {
+        ...range,
+        start,
+        end: start + 
+          Math.min(range.end - range.start, rule.dest + rule.count)
+      }
+      // console.log(`mapped`, mapped)
+      mappedRanges.push(mapped)
+      range.start += mapped.end - mapped.start
+      // console.log(`new start`, range.start)
+    }
+    else if (range.end > rule.src) {
+      mappedRanges.push({
+        ...range,
+        start: range.start,
+        end: rule.src
+      })
+      range.start = rule.src
+    }
+    else {
+      mappedRanges.push(range);
+      break;
+    }
+  }
+  if (range.start < range.end) {
+    mappedRanges.push(range)
+  }
+  if ((range as any)[''] !== undefined) {
+    console.log("rules", sortedRules)
+    console.log("before", copy)
+    console.log("mapped", mappedRanges)
+  }
+
+  // check invariants
+  let tally = 0;
+  for (let range of mappedRanges) {
+    if (range.start >= range.end) {
+      throw new Error("invalid range")
+    }
+    tally += range.end - range.start
+  }
+  if (tally !== copy.end - copy.start) {
+    throw new Error("split ranges do not sum to original size")
+  }
+
+  return mappedRanges;
+}
+
 async function main(testCase: TestCase = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
@@ -28,71 +88,9 @@ async function main(testCase: TestCase = 'example.txt') {
   let currentMapping: string | undefined;
 
   function applyRules() {
-      // console.log(values)
-      // console.log(currentMapping)
-      currentRules.sort((a,b) => a.src - b.src);
-      ranges = ranges.flatMap(range => {
-        const mappedRanges: Range[] = []
-        
-        const copy = {...range};
-        for (let rule of currentRules) {
-          if (range.start === range.end) break;
-          if (range.start >= rule.src + rule.count) continue;
-          else if (range.start >= rule.src) {
-            // console.log(`splitting range`, range);
-            // console.log(`on rule`, rule)
-            const delta = range.start - rule.src;
-            const start = rule.dest + delta
-            const mapped = {
-              ...range,
-              start,
-              end: start + 
-                Math.min(range.end - range.start, rule.dest + rule.count)
-            }
-            // console.log(`mapped`, mapped)
-            mappedRanges.push(mapped)
-            range.start += mapped.end - mapped.start
-            // console.log(`new start`, range.start)
-          }
-          else if (range.end > rule.src) {
-            mappedRanges.push({
-              ...range,
-              start: range.start,
-              end: rule.src
-            })
-            range.start = rule.src
-          }
-          else {
-            mappedRanges.push(range);
-            break;
-          }
-        }
-        if (range.start < range.end) {
-          mappedRanges.push(range)
-        }
-        if ((range as any)[''] !== undefined) {
-          console.log(currentMapping)
-          console.log("rules", currentRules)
-          console.log("before", copy)
-          console.log("mapped", mappedRanges)
-        }
-
-        // check invariants
-        let tally = 0;
-        for (let range of mappedRanges) {
-          if (range.start >= range.end) {
-            throw new Error("invalid range")
-          }
-          tally += range.end - range.start
-        }
-        if (tally !== copy.end - copy.start) {
-          throw new Error("split ranges do not sum to original size")
-        }
-
-        return mappedRanges;
-        // const rule = currentRules.find(rule => v >= rule.src && v < rule.src +rule.count)
-        // return rule ? rule.dest + (v - rule.src) : v
-      })
+    console.log(currentMapping)
+    currentRules.sort((a,b) => a.src - b.src);
+    ranges = ranges.flatMap(range => splitRange(range, currentRules))
   }
 
   for await (const line of file.readLines()) {
