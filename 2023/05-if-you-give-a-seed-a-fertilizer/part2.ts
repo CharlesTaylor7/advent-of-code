@@ -56,14 +56,13 @@ function splitRange(range: Range, sortedRules: Rule[]): Range[] {
 async function main(testCase: TestCase = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
-  let ranges: Range[] = []
   let row = 0;
-  let currentRules: Rule[] = []
-  let currentMapping: string | undefined;
+  let ranges: Range[] = []
+  let rules: Rule[] = []
 
   function applyRules() {
-    currentRules.sort((a,b) => a.src - b.src);
-    ranges = ranges.flatMap(range => splitRange(range, currentRules))
+    rules.sort((a,b) => a.src - b.src);
+    ranges = ranges.flatMap(range => splitRange(range, rules))
   }
 
   for await (const line of file.readLines()) {
@@ -79,15 +78,14 @@ async function main(testCase: TestCase = 'example.txt') {
       }
     }
     else if (line.match(/map:$/)) {
-      currentMapping = line
-      currentRules = []
+      rules = []
     }
-    else if (!line && currentRules.length) {
+    else if (!line && rules.length) {
       applyRules()
     }
     else {
       const [dest, src, count] = line.split(/\s+/).map(Number)
-      currentRules.push({src, dest, count})
+      rules.push({src, dest, count})
     }
   }
   applyRules()
