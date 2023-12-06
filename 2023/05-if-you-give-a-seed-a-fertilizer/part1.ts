@@ -33,11 +33,14 @@ async function main(testCase: TestCase = 'example.txt') {
         
         for (let rule of currentRules) {
           if (range.start >= rule.src && range.start < rule.src + rule.count) {
-            const start = rule.dest + (range.start - rule.src);
-            mappedRanges.push({
+            const delta = range.start - rule.src;
+            const start = rule.dest + delta
+            const mapped = {
               start,
-              count: Math.min(rule.count, range.count),
-            })
+              count: Math.min(rule.count - delta, range.count),
+            }
+            mappedRanges.push(mapped)
+            range.count -= mapped.count
           }
         }
         return mappedRanges;
