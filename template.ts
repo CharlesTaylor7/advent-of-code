@@ -11,6 +11,7 @@ async function main(testCase: TestCase = 'example.txt') {
   for await (const line of file.readLines()) {
     console.log(line)
   }
+  file.close()
 }
 
 main();
