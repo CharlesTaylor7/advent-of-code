@@ -1,17 +1,15 @@
 #!/usr/bin/env ts-node
 
-import fs from 'node:fs/promises'
-import path from 'node:path'
+import fs from "node:fs/promises";
+import path from "node:path";
 
-type TestCase = 'input.txt' | 'example.txt'
+type TestCase = "input.txt" | "example.txt";
 
-async function main(testCase: TestCase = 'example.txt') {
-  const file = await fs.open(path.join(__dirname, testCase));
+async function main(testCase: TestCase = "example.txt") {
+  const contents = await fs.readFile(path.join(__dirname, testCase), "utf-8");
 
-  for await (const line of file.readLines()) {
-    console.log(line)
-  }
-  file.close()
+  console.log(contents);
 }
 
 main();
+line;

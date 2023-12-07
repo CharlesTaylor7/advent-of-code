@@ -6,38 +6,32 @@ import path from "node:path";
 type TestCase = "input.txt" | "example.txt";
 
 type Point = [number, number, number];
-async function main(testCase: TestCase = "example.txt") {
-  const points: Point[] = [];
-  const set = new Set<string>();
 
-  const file = await fs.open(path.join(__dirname, testCase));
-  for await (const line of file.readLines()) {
-    const point = line.split(",").map(Number) as Point;
-    points.push(point);
+async function main(testCase: TestCase = "example.txt") {
+  const set = new Set<string>();
+  let bounds = {
+    minX: Number.POSITIVE_INFINITY,
+    minY: Number.POSITIVE_INFINITY,
+    minZ: Number.POSITIVE_INFINITY,
+    maxX: Number.NEGATIVE_INFINITY,
+    maxY: Number.NEGATIVE_INFINITY,
+    maxZ: Number.NEGATIVE_INFINITY,
+  };
+  for (const line of (await fs.readFile("utf8")).split("\n")) {
+    const [x, y, z] = line.split(",").map(Number);
     set.add(line);
+    bounds.minX = Math.min(x, bounds.minX);
+    bounds.maxX = Math.max(x, bounds.maxX);
+    bounds.minY = Math.min(y, bounds.minY);
+    bounds.maxY = Math.max(y, bounds.maxY);
+    bounds.minZ = Math.min(z, bounds.minZ);
+    bounds.maxZ = Math.max(z, bounds.maxZ);
   }
-  file.close();
+
+  console.log(bounds);
 
   let tally = 0;
-  let d = [-1, 1];
-  for (let point of points) {
-    for (let dx of d) {
-      const copy: Point = [...point];
-      copy[0] += dx;
-      if (!set.has(copy.join(","))) tally++;
-    }
-    for (let dy of d) {
-      const copy: Point = [...point];
-      copy[1] += dy;
-      if (!set.has(copy.join(","))) tally++;
-    }
-    for (let dz of d) {
-      const copy: Point = [...point];
-      copy[2] += dz;
-      if (!set.has(copy.join(","))) tally++;
-    }
-  }
   console.log(tally);
 }
 
-main("input.txt");
+main("example.txt");
