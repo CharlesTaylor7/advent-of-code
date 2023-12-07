@@ -12,4 +12,3 @@ async function main(testCase: TestCase = "example.txt") {
 }
 
 main();
-line;
