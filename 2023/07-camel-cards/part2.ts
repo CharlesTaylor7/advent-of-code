@@ -77,24 +77,22 @@ async function main(testCase: TestCase = "example.txt") {
 
   let tally = 0;
   for (let i = 0; i < rows.length; i++) {
-    // console.log(rows[i].bid, "*", i + 1);
     tally += (i + 1) * rows[i].bid;
   }
-  //console.log(rows);
   console.log(tally);
 }
 
 function handType(grouped: Map<number, number>, jokers: number): HandType {
-  const pairs = Array.from(grouped.values());
-
-  pairs.sort((a, b) => b - a);
-  if ((pairs[0] ?? 0) + jokers === 5) return "five-of-a-kind";
-  if (pairs[0] + jokers === 4) return "four-of-a-kind";
-  if (pairs[0] + jokers === 3 && pairs[1] === 2) return "full-house";
-  if (pairs[0] === 3 && pairs[1] + jokers === 2) return "full-house";
-  if (pairs[0] + jokers === 3) return "three-of-a-kind";
-  if (pairs[0] === 2 && pairs[1] + jokers === 2) return "two-pair";
-  if (pairs[0] + jokers === 2) return "one-pair";
+  const counts = Array.from(grouped.values());
+  counts.sort((a, b) => b - a);
+  const a = (counts[0] ?? 0) + jokers;
+  const b = counts[1] ?? 0;
+  if (a === 5) return "five-of-a-kind";
+  if (a === 4) return "four-of-a-kind";
+  if (a === 3 && b === 2) return "full-house";
+  if (a === 3) return "three-of-a-kind";
+  if (a === 2 && b === 2) return "two-pair";
+  if (a === 2) return "one-pair";
   return "nothing";
 }
 
