@@ -18,12 +18,13 @@ type Rock = number[]
 const WIDTH = 7;
 
 // new rock falling offset
-const OFFSET = 4 * WIDTH + 3
+const OFFSET = 3 * WIDTH + 2
 
 async function main(testCase: TestCase = 'example.txt') {
   const file = await fs.open(path.join(__dirname, testCase));
 
   const jetStream = (await file.readFile('utf8')).trimEnd();
+  file.close();
   const rocks = await getRocks();
   console.log("jet", jetStream)
   console.log("rocks", rocks)
@@ -36,11 +37,34 @@ async function main(testCase: TestCase = 'example.txt') {
       k => k + OFFSET + chamber.height * WIDTH
     );
 
+    function show() {
+      if (chamber.height > 20) return
+      let view: string[][] = []
+      for (let row = 0; row < chamber.height + 6; row++) {
+        view.push([])
+        for (let col = 0; col < WIDTH; col++) {
+          const cell = (chamber.bedrock.has(row * WIDTH + col)) ? '#' : '.'
+          view[row].push(cell)
+        }
+      }
+
+      for (let r of rock) {
+        const row = Math.floor(r / 7)
+        const col = r % 7
+        view[row] && (view[row][col] = '@')
+      }
+      view.reverse()
+
+      console.log(view.map(row => '|' + row.join("") + '|').join("\n"))
+      console.log('+-------+\n')
+    }
+
+    show()
     while (true) {
       const jet = jetStream[j % jetStream.length];
       j++
       if (jet === '>') {
-        const canMove = rock.every(r => (r + 1) % 7 !== 0)
+        const canMove = rock.every(r => (r + 1) % 7 !== 0 && !chamber.bedrock.has(r + 1))
         if (canMove) {
           for (let i = 0; i < rock.length; i++) {
             rock[i] += 1;
@@ -48,7 +72,7 @@ async function main(testCase: TestCase = 'example.txt') {
         }
       }
       else if (jet === '<') {
-        const canMove = rock.every(r => (r + 6) % 7 !== 6)
+        const canMove = rock.every(r => (r + 6) % 7 !== 6 && !chamber.bedrock.has(r - 1))
         if (canMove) {
           for (let i = 0; i < rock.length; i++) {
             rock[i] -= 1;
@@ -56,20 +80,25 @@ async function main(testCase: TestCase = 'example.txt') {
         }
       }
       else {
-        console.log(jet)
         throw new Error();
       }
+      console.log(jet)
+      show()
+
       const canMove = rock.every(r => r > WIDTH && !chamber.bedrock.has(r - WIDTH))
       if (canMove) {
         for (let i = 0; i < rock.length; i++) {
           rock[i] -= WIDTH;
         }
+
+        console.log('v')
+        show()
       }
       else {
         for (let r of rock) {
           chamber.bedrock.add(r);
         }
-        chamber.height = Math.floor(rock[rock.length - 1] / 7)
+        chamber.height = 1 + Math.floor(rock[rock.length - 1] / 7)
         break;
       }
     }
@@ -103,6 +132,7 @@ async function getRocks(): Promise<Rock[]> {
       buildRock();
     }
   }
+  file.close()
   buildRock()
   return rocks
 }
