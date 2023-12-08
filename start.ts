@@ -62,13 +62,13 @@ async function main() {
   }
 
   await fs.copyFile(
-    "template.ts",
-    `${dir}/part1.ts`,
+    "hyperscript.html",
+    `${dir}/index.html`,
     fs.constants.COPYFILE_EXCL,
   );
   await fs.copyFile(
-    "hyperscript.html",
-    `${dir}/index.html`,
+    "template.ts",
+    `${dir}/part1.ts`,
     fs.constants.COPYFILE_EXCL,
   );
 }
