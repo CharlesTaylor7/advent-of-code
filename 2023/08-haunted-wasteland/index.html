@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>Doggos!</title>
+    <title>Advent of Code</title>
     <meta charset="utf-8" />
     <link rel="shortcut icon" href="./favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -16,5 +16,14 @@
       }
     </style>
   </head>
-  <body _="init log 'hello from hyperscript'"></body>
+  <body
+    id="root"
+    _="init 
+    repeat 10 times
+      log 'put'
+      make a <div.foo/> 
+      put it into me
+    end
+    "
+  ></body>
 </html>
