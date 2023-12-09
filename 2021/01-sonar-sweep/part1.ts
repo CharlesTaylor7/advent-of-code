@@ -9,15 +9,17 @@ async function main(testCase: TestCase = "example.txt") {
   // stream line by line
   const file = await fs.open(path.join(__dirname, testCase));
 
+  let tally = 0;
+  let previous = Number.POSITIVE_INFINITY;
   for await (const line of file.readLines()) {
-    console.log(line);
+    const current = Number(line);
+    tally += current > previous ? 1 : 0;
+
+    previous = current;
   }
   file.close();
 
-  // or go all at once
-  const contents = await fs.readFile(path.join(__dirname, testCase), "utf-8");
-
-  console.log(contents);
+  console.log(tally);
 }
 
-main();
+main("input.txt");

@@ -38,6 +38,7 @@ async function main() {
     const o = outcomeScores[outcome];
     total += s + o
   }
+  file.close();
   console.log(total);
 }
 main();

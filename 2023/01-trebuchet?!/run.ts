@@ -20,6 +20,7 @@ async function part1(testCase: TestCase = 'example.txt') {
     }
     tally += Number(first) * 10 + Number(last);
   }
+  file.close()
   console.log(tally)
 }
 
