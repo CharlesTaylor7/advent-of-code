@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
     <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.12/src/hdb.js"></script>
     <style>
       body {
         margin: 0;
@@ -16,14 +17,22 @@
       }
     </style>
   </head>
-  <body
-    id="root"
-    _="init 
-    repeat 10 times
-      log 'put'
-      make a <div.foo/> 
-      put it into me
-    end
+  <body>
+    <input
+      type="file"
+      _="
+      on input
+        put the first of target's files into file
+        text() with file
+        log it
+        put it into #example
+        pick match of '\w+' from :input
+        repeat for match in result index i
+          log it[1]
+      
+        end
     "
-  ></body>
+    />
+    <div id="example" />
+  </body>
 </html>
