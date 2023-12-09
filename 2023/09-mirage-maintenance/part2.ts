@@ -24,8 +24,6 @@ async function main(testCase: TestCase = "example.txt") {
       current = next;
     }
 
-    // console.log(rows);
-
     rows.reverse();
     let temp = 0;
     for (let row of rows) {
