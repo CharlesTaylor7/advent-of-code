@@ -10,8 +10,9 @@ async function main(testCase: TestCase = "example.txt") {
 
   let tally = 0;
   const regex =
-    /Blueprint (?<id>\d+):\s+Each ore robot costs (?<oreCost>\d+) or.\s+Each clay robot costs (?<clayCost>\d+) ore.\s+Each obsidian robot costs (?<obsidianCost1>\d+) ore and (?<obsidianCost2>\d+) clay.\s+Each geode robot costs (?<geodeCost1>\d+) ore and (?<geodeCost2>\d+) obsidian./gm;
+    /Blueprint (?<id>\d+):\s+Each ore robot costs (?<oreCost>\d+) ore\.\s+Each clay robot costs (?<clayCost>\d+) ore\.\s+Each obsidian robot costs (?<obsidianCost1>\d+) ore and (?<obsidianCost2>\d+) clay\.\s+Each geode robot costs (?<geodeCost1>\d+) ore and (?<geodeCost2>\d+) obsidian\./gm;
   for (let match of contents.matchAll(regex)) {
+    console.log(match[0]);
     const {
       id,
       oreCost,
@@ -55,24 +56,30 @@ async function main(testCase: TestCase = "example.txt") {
 
 // greedy approach first, if it doesn't work than we'l pivot to dynamic programming
 function maxGeodes(blueprint: Blueprint, state: State): number {
-  for (let i = 0; i < state.minutes; i++) {
+  console.log(state);
+  const minutes = 24;
+  for (let i = 0; i < minutes; i++) {
     // can the factory build more than 1 robot per minute?
     
     // greedy, try to build geode collecting robots and work backwards from there. 
     const newRobots: ResourceType[] = [];
     if (tryToBuild(blueprint, state, 'geode')) {
+      console.log("build a geode-cracking robot")
       newRobots.push('geode');
     }
 
     if (tryToBuild(blueprint, state, 'obsidian')) {
+      console.log("build an obsidian-collecting robot")
       newRobots.push('obsidian');
     }
 
     if (tryToBuild(blueprint, state, 'clay')) {
+      console.log("build a clay-harvesting robot")
       newRobots.push('clay');
     }
 
     if (tryToBuild(blueprint, state, 'ore')) {
+      console.log("build an ore-mining robot")
       newRobots.push('ore');
     }
 
@@ -83,6 +90,8 @@ function maxGeodes(blueprint: Blueprint, state: State): number {
     for (let robot of newRobots) {
       state.robots[robot]++;
     }
+    state.minutes--
+    console.log(state);
   }
 
   return state.resources.geode;
@@ -110,4 +119,4 @@ type State = {
 
 type Blueprint = Record<ResourceType, Partial<Record<ResourceType, number>>>;
 
-main("input.txt");
+main("example.txt");
