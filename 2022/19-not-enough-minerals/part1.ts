@@ -27,10 +27,10 @@ async function main(testCase: TestCase = "example.txt") {
     );
 
     const blueprint: Blueprint  = {
-      ore: [[oreCost, "ore"]],
-      clay: [[clayCost, "ore"]],
-      obsidian: [[obsidianCost1, "ore"], [obsidianCost2, "clay"]],
-      geode: [[geodeCost1, "ore"], [geodeCost2, "obsidian"]],
+      ore: { ore: oreCost },
+      clay: { ore: clayCost },
+      obsidian: { ore: obsidianCost1, clay: obsidianCost2 },
+      geode: { ore: geodeCost1, obsidian: geodeCost2 },
     };
 
     const state: State = {
@@ -50,11 +50,55 @@ async function main(testCase: TestCase = "example.txt") {
     }
     tally += id * maxGeodes(blueprint, state);
   }
+  console.log(tally);
 }
 
-    // greedy approach first, if it doesn't work than we'l pivot to dynamic programming
+// greedy approach first, if it doesn't work than we'l pivot to dynamic programming
 function maxGeodes(blueprint: Blueprint, state: State): number {
-  return 2;
+  for (let i = 0; i < state.minutes; i++) {
+    // can the factory build more than 1 robot per minute?
+    
+    // greedy, try to build geode collecting robots and work backwards from there. 
+    const newRobots: ResourceType[] = [];
+    if (tryToBuild(blueprint, state, 'geode')) {
+      newRobots.push('geode');
+    }
+
+    if (tryToBuild(blueprint, state, 'obsidian')) {
+      newRobots.push('obsidian');
+    }
+
+    if (tryToBuild(blueprint, state, 'clay')) {
+      newRobots.push('clay');
+    }
+
+    if (tryToBuild(blueprint, state, 'ore')) {
+      newRobots.push('ore');
+    }
+
+    for (let [res, amount] of Object.entries(state.robots)) {
+      state.resources[res as ResourceType] += amount;
+    }
+
+    for (let robot of newRobots) {
+      state.robots[robot]++;
+    }
+  }
+
+  return state.resources.geode;
+}
+
+function tryToBuild(blueprint: Blueprint, state: State, resource: ResourceType): boolean {
+
+  for (let [res, amount] of Object.entries(blueprint[resource])) {
+    if (state.resources[res as ResourceType] < amount) return false
+  }
+
+  for (let [res, amount] of Object.entries(blueprint[resource])) {
+    state.resources[res as ResourceType] -= amount;
+  }
+
+  return true
 }
 
 type ResourceType = "ore" | "clay" | "obsidian" | "geode";
@@ -64,6 +108,6 @@ type State = {
   robots: Record<ResourceType, number>;
 };
 
-type Blueprint = Record<ResourceType, [number, ResourceType][]>;
+type Blueprint = Record<ResourceType, Partial<Record<ResourceType, number>>>;
 
 main("input.txt");
