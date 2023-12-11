@@ -9,15 +9,29 @@ async function main(testCase: TestCase = "example.txt") {
   // stream line by line
   const file = await fs.open(path.join(__dirname, testCase));
 
+  let initial: number[] = [];
+
   for await (const line of file.readLines()) {
-    console.log(line);
+    const n = Number(line);
+    initial.push(n);
   }
   file.close();
 
-  // or go all at once
-  const contents = await fs.readFile(path.join(__dirname, testCase), "utf-8");
+  let shuffled: Shuffled = Array.from(initial, (value, id) => ({value, id}));
+  for (let id = 0; id < shuffled.length; id++) {
 
-  console.log(contents);
+    //const value = initial[id];
+    const index = shuffled.findIndex(s => s.id === id);
+    const value = shuffled[index].value;
+
+    //for (let j =
+    // console.log(value); 
+  }
 }
 
-main();
+type Shuffled = {
+  id: number,
+  value: number,
+}[]
+
+main('input.txt');
