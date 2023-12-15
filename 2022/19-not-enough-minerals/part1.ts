@@ -22,12 +22,12 @@ async function main(testCase: TestCase = "example.txt") {
       geodeCost1,
       geodeCost2,
     } = Object.fromEntries(
-      Object
-      .entries(match.groups as Record<string, string>)
-      .map(([key, value]) => [key, Number(value)] as [string, number])
+      Object.entries(match.groups as Record<string, string>).map(
+        ([key, value]) => [key, Number(value)] as [string, number],
+      ),
     );
 
-    const blueprint: Blueprint  = {
+    const blueprint: Blueprint = {
       ore: { ore: oreCost },
       clay: { ore: clayCost },
       obsidian: { ore: obsidianCost1, clay: obsidianCost2 },
@@ -47,8 +47,8 @@ async function main(testCase: TestCase = "example.txt") {
         clay: 0,
         obsidian: 0,
         geode: 0,
-      }
-    }
+      },
+    };
     tally += id * maxGeodes(blueprint, state);
   }
   console.log(tally);
@@ -60,27 +60,27 @@ function maxGeodes(blueprint: Blueprint, state: State): number {
   const minutes = 24;
   for (let i = 0; i < minutes; i++) {
     // can the factory build more than 1 robot per minute?
-    
-    // greedy, try to build geode collecting robots and work backwards from there. 
+
+    // greedy, try to build geode collecting robots and work backwards from there.
     const newRobots: ResourceType[] = [];
-    if (tryToBuild(blueprint, state, 'geode')) {
-      console.log("build a geode-cracking robot")
-      newRobots.push('geode');
+    if (tryToBuild(blueprint, state, "geode")) {
+      console.log("build a geode-cracking robot");
+      newRobots.push("geode");
     }
 
-    if (tryToBuild(blueprint, state, 'obsidian')) {
-      console.log("build an obsidian-collecting robot")
-      newRobots.push('obsidian');
+    if (tryToBuild(blueprint, state, "obsidian")) {
+      console.log("build an obsidian-collecting robot");
+      newRobots.push("obsidian");
     }
 
-    if (tryToBuild(blueprint, state, 'clay')) {
-      console.log("build a clay-harvesting robot")
-      newRobots.push('clay');
+    if (tryToBuild(blueprint, state, "clay")) {
+      console.log("build a clay-harvesting robot");
+      newRobots.push("clay");
     }
 
-    if (tryToBuild(blueprint, state, 'ore')) {
-      console.log("build an ore-mining robot")
-      newRobots.push('ore');
+    if (tryToBuild(blueprint, state, "ore")) {
+      console.log("build an ore-mining robot");
+      newRobots.push("ore");
     }
 
     for (let [res, amount] of Object.entries(state.robots)) {
@@ -90,29 +90,32 @@ function maxGeodes(blueprint: Blueprint, state: State): number {
     for (let robot of newRobots) {
       state.robots[robot]++;
     }
-    state.minutes--
+    state.minutes--;
     console.log(state);
   }
 
   return state.resources.geode;
 }
 
-function tryToBuild(blueprint: Blueprint, state: State, resource: ResourceType): boolean {
-
+function tryToBuild(
+  blueprint: Blueprint,
+  state: State,
+  resource: ResourceType,
+): boolean {
   for (let [res, amount] of Object.entries(blueprint[resource])) {
-    if (state.resources[res as ResourceType] < amount) return false
+    if (state.resources[res as ResourceType] < amount) return false;
   }
 
   for (let [res, amount] of Object.entries(blueprint[resource])) {
     state.resources[res as ResourceType] -= amount;
   }
 
-  return true
+  return true;
 }
 
 type ResourceType = "ore" | "clay" | "obsidian" | "geode";
 type State = {
-  minutes: number,
+  minutes: number;
   resources: Record<ResourceType, number>;
   robots: Record<ResourceType, number>;
 };

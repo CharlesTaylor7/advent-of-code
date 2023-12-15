@@ -1,15 +1,15 @@
 #!/usr/bin/env ts-node
 
-import fs from 'node:fs/promises'
+import fs from "node:fs/promises";
 
 async function main() {
-  const file = await fs.open('./08.txt')
+  const file = await fs.open("./08.txt");
 
-  const grid: number[][] = []
+  const grid: number[][] = [];
   for await (const line of file.readLines()) {
     grid.push(line.split("").map(Number));
   }
-  part2(grid)
+  part2(grid);
 }
 
 function part1(grid: number[][]) {
@@ -18,7 +18,7 @@ function part1(grid: number[][]) {
   const width = grid[0].length;
 
   let set: Set<number> = new Set();
-  const include = (i: number, j: number)  => set.add(j * width + i);
+  const include = (i: number, j: number) => set.add(j * width + i);
 
   let max = -1;
   // row by row
@@ -28,7 +28,7 @@ function part1(grid: number[][]) {
     for (let i = 0; i < width; i++) {
       if (grid[j][i] > max) {
         max = grid[j][i];
-        console.log("ltr", {i, j}, grid[j][i])
+        console.log("ltr", { i, j }, grid[j][i]);
         include(i, j);
       }
     }
@@ -37,8 +37,8 @@ function part1(grid: number[][]) {
     max = -1;
     for (let i = width - 1; i > 0; i--) {
       if (grid[j][i] > max) {
-        max = grid[j][i]
-        console.log("rtl", {i, j}, grid[j][i])
+        max = grid[j][i];
+        console.log("rtl", { i, j }, grid[j][i]);
         include(i, j);
       }
     }
@@ -50,8 +50,8 @@ function part1(grid: number[][]) {
     max = -1;
     for (let j = 0; j < height; j++) {
       if (grid[j][i] > max) {
-        max = grid[j][i]
-        console.log("ttb", {i, j}, grid[j][i])
+        max = grid[j][i];
+        console.log("ttb", { i, j }, grid[j][i]);
         include(i, j);
       }
     }
@@ -60,8 +60,8 @@ function part1(grid: number[][]) {
     max = -1;
     for (let j = height - 1; j > 0; j--) {
       if (grid[j][i] > max) {
-        max = grid[j][i]
-        console.log("btt", {i, j}, grid[j][i])
+        max = grid[j][i];
+        console.log("btt", { i, j }, grid[j][i]);
         include(i, j);
       }
     }
@@ -70,9 +70,8 @@ function part1(grid: number[][]) {
   console.log(set.size);
 }
 
-function part2 (grid: number[][]) {
-
-      console.log(grid)
+function part2(grid: number[][]) {
+  console.log(grid);
   const height = grid.length;
   const width = grid[0].length;
 
@@ -84,59 +83,55 @@ function part2 (grid: number[][]) {
       let d1 = 0;
       for (let k = i - 1; k >= 0; k--) {
         if (grid[j][i] > grid[j][k]) {
-          d1++
-        }
-        else {
-          d1++
-          break
+          d1++;
+        } else {
+          d1++;
+          break;
         }
       }
 
       // to the right
       let d2 = 0;
-      for (let k = i+1; k < width; k++) {
+      for (let k = i + 1; k < width; k++) {
         if (grid[j][i] > grid[j][k]) {
-          d2++
-        }
-        else {
-          d2++
-          break
+          d2++;
+        } else {
+          d2++;
+          break;
         }
       }
 
       // downward
       let d3 = 0;
-      for (let k = j+1; k < height; k++) {
+      for (let k = j + 1; k < height; k++) {
         if (grid[j][i] > grid[k][i]) {
-          d3++
-        }
-        else {
-          d3++
-          break
+          d3++;
+        } else {
+          d3++;
+          break;
         }
       }
 
       // upward
       let d4 = 0;
-      for (let k = j-1; k >= 0; k--) {
+      for (let k = j - 1; k >= 0; k--) {
         if (grid[j][i] > grid[k][i]) {
-          d4++
-        }
-        else {
-          d4++
-          break
+          d4++;
+        } else {
+          d4++;
+          break;
         }
       }
 
-      const score = d1 * d2 * d3 * d4
-      console.log({i,j,score, d1,d2,d3,d4})
+      const score = d1 * d2 * d3 * d4;
+      console.log({ i, j, score, d1, d2, d3, d4 });
       if (score > maxScore) {
-        maxScore = score
+        maxScore = score;
       }
     }
   }
 
-  console.log(maxScore)
+  console.log(maxScore);
 }
 
 main();

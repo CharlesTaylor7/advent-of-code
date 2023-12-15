@@ -17,21 +17,20 @@ async function main(testCase: TestCase = "example.txt") {
   }
   file.close();
 
-  let shuffled: Shuffled = Array.from(initial, (value, id) => ({value, id}));
+  let shuffled: Shuffled = Array.from(initial, (value, id) => ({ value, id }));
   for (let id = 0; id < shuffled.length; id++) {
-
     //const value = initial[id];
-    const index = shuffled.findIndex(s => s.id === id);
+    const index = shuffled.findIndex((s) => s.id === id);
     const value = shuffled[index].value;
 
     //for (let j =
-    // console.log(value); 
+    // console.log(value);
   }
 }
 
 type Shuffled = {
-  id: number,
-  value: number,
-}[]
+  id: number;
+  value: number;
+}[];
 
-main('input.txt');
+main("input.txt");

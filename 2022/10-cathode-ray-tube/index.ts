@@ -70,10 +70,10 @@ function* part2(): Generator<unknown, string, string> {
 
   function runCycle(inc: number) {
     if (cycle % 40 === 0) {
-      crt.push('\n')
+      crt.push("\n");
     }
     X += inc;
-    crt.push(Math.abs(X - (cycle % 40)) <= 1 ? '#' : '.')
+    crt.push(Math.abs(X - (cycle % 40)) <= 1 ? "#" : ".");
     cycle++;
   }
 }
