@@ -7,7 +7,8 @@ type TestCase =
   "input.txt" | "example.txt" | "example2.txt";
 
 type Location = Readonly<{ 
-  row: number; col: number 
+  row: number; 
+  col: number;
 }>;
 type Direction = 'N' | 'E' | 'W' | 'S';
 type Tile = '.' | 'S' | Pipe;
