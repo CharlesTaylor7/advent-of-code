@@ -4,6 +4,7 @@
 #![allow(non_snake_case)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
+use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Direction {
@@ -38,12 +39,35 @@ impl Direction {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct Location {
     pub row: usize,
     pub col: usize,
 }
+
 impl Location {
+    // get the directional difference if the locations are adjacent
+    pub fn diff_adjacent(&self, loc: &Location) -> Option<Direction> {
+        let dx = (self.col as i64) - (loc.col as i64);
+        let dy = (self.row as i64) - (loc.row as i64);
+        //let dy= self.row.into() - loc.row.into();
+        if dx != 0 && dy == 0 {
+            return match dx {
+                1 => Some(Direction::East),
+                -1 => Some(Direction::West),
+                _ => None,
+            };
+        }
+
+        if dx == 0 && dy != 0 {
+            return match dy {
+                1 => Some(Direction::South),
+                -1 => Some(Direction::North),
+                _ => None,
+            };
+        }
+        None
+    }
     pub fn advance(&self, dir: Direction) -> Self {
         match dir {
             Direction::North => Self {
@@ -69,19 +93,42 @@ impl Location {
     }
 }
 
+#[derive(PartialEq, Eq)]
 enum PathStep {
     Next(Location, Direction),
     Done,
     Failure,
 }
 
+struct PathState {
+    locations: Vec<Location>,
+    step: PathStep,
+}
+
 // Row major order matrix of map
-#[derive(Debug)]
+//#[derive()]
 struct Map {
-    height: usize,
-    width: usize,
-    start: Location,
+    pub height: usize,
+    pub width: usize,
+    pub start: Location,
     data: Vec<Tile>,
+}
+
+impl std::fmt::Debug for Map {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut data = String::with_capacity((self.width + 1) * self.height);
+        for row in 0..self.height {
+            for col in 0..self.width {
+                data.push_str(
+                    &self
+                        .lookup(&Location { row, col })
+                        .map_or("?".to_owned(), |s| format!("{:#?}", s)),
+                );
+            }
+            data.push('\n')
+        }
+        write!(f, "{}", data)
+    }
 }
 
 impl Map {
@@ -102,20 +149,27 @@ impl Map {
             row += 1;
         }
         Map {
-            height: row + 1,
+            height: row,
+            //+ 1,
             width,
             data,
             start: start.unwrap(),
         }
     }
 
-    pub fn lookup(&self, location: &Location) -> Option<Tile> {
-        let index: usize = location.row * self.width + location.col;
-        self.data.get(index).cloned()
+    fn to_index(&self, location: &Location) -> usize {
+        location.row * self.width + location.col
     }
 
-    pub fn find_path(&self) -> Vec<Location> {
-        vec![]
+    pub fn lookup(&self, location: &Location) -> Option<Tile> {
+        self.data.get(self.to_index(location)).cloned()
+    }
+
+    pub fn update(&mut self, location: &Location, tile: Tile) {
+        let index = self.to_index(location);
+        self.data.get_mut(index).map(|v| {
+            *v = tile;
+        });
     }
 
     pub fn step(&self, loc: &Location, from: Direction) -> PathStep {
@@ -130,13 +184,73 @@ impl Map {
             },
         }
     }
+
+    pub fn find_path(&self) -> Vec<Location> {
+        let mut paths = Vec::with_capacity(4);
+        for d in Direction::ALL {
+            paths.push(PathState {
+                locations: Vec::with_capacity(self.width * self.height),
+                step: PathStep::Next(self.start.advance(d), d.opposite()),
+            });
+        }
+        loop {
+            for i in 0..4 {
+                let mut state = &mut paths[i];
+                match std::mem::replace(&mut state.step, PathStep::Failure) {
+                    PathStep::Failure => continue,
+                    PathStep::Done => {
+                        return std::mem::replace(&mut state.locations, Vec::with_capacity(0));
+                    }
+                    PathStep::Next(loc, dir) => {
+                        state.step = self.step(&loc, dir);
+                        state.locations.push(loc);
+                    }
+                }
+            }
+        }
+    }
+    pub fn fill_in_start(&mut self, first: &Location, last: &Location) {
+        let startPipe = Pipe::create(
+            first.diff_adjacent(&self.start).unwrap(),
+            last.diff_adjacent(&self.start).unwrap(),
+        );
+
+        self.update(&self.start.clone(), Tile::Pipe(startPipe));
+    }
+
+    pub fn clear_debris(&mut self, pipes: HashSet<Location>) {
+        for row in 0..self.height {
+            for col in 0..self.width {
+                let loc = Location { row, col };
+                if !pipes.contains(&loc) {
+                    self.update(&loc, Tile::Empty(None))
+                }
+            }
+        }
+    }
 }
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 enum Tile {
     Pipe(Pipe),
     Empty(Option<Tag>),
     Start,
+}
+
+impl std::fmt::Debug for Tile {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Tile::Pipe(pipe) => format!("{:#?}", pipe),
+                Tile::Empty(None) => ".".to_owned(),
+                Tile::Empty(Some(Tag::Interior)) => "I".to_owned(),
+                Tile::Empty(Some(Tag::Exterior)) => "O".to_owned(),
+                Tile::Start => "S".to_owned(),
+            }
+        )
+    }
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
@@ -155,17 +269,43 @@ impl Tile {
     }
 }
 
-#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 struct Pipe(u8);
 
-impl Pipe {
-    const N_S: Self = Self(Direction::North.bit_value() + Direction::South.bit_value());
-    const E_W: Self = Self(Direction::East.bit_value() + Direction::West.bit_value());
+impl std::fmt::Debug for Pipe {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", {
+            if *self == Pipe::N_S {
+                '|'
+            } else if *self == Pipe::E_W {
+                '-'
+            } else if *self == Pipe::N_W {
+                'J'
+            } else if *self == Pipe::N_E {
+                'L'
+            } else if *self == Pipe::S_E {
+                'F'
+            } else if *self == Pipe::S_W {
+                '7'
+            } else {
+                '?'
+            }
+        })
+    }
+}
 
-    const S_E: Self = Self(Direction::South.bit_value() + Direction::East.bit_value());
-    const S_W: Self = Self(Direction::South.bit_value() + Direction::West.bit_value());
-    const N_E: Self = Self(Direction::North.bit_value() + Direction::East.bit_value());
-    const N_W: Self = Self(Direction::North.bit_value() + Direction::West.bit_value());
+impl Pipe {
+    const N_S: Self = Self::create(Direction::North, Direction::South);
+    const E_W: Self = Self::create(Direction::East, Direction::West);
+
+    const S_E: Self = Self::create(Direction::South, Direction::East);
+    const S_W: Self = Self::create(Direction::South, Direction::West);
+    const N_E: Self = Self::create(Direction::North, Direction::East);
+    const N_W: Self = Self::create(Direction::North, Direction::West);
+
+    pub const fn create(a: Direction, b: Direction) -> Self {
+        Self(a.bit_value() + b.bit_value())
+    }
 
     pub fn parse(text: char) -> Option<Self> {
         match text {
@@ -190,12 +330,19 @@ impl Pipe {
 }
 
 fn main() -> std::io::Result<()> {
-    let example = include_str!("example.txt");
+    let text = include_str!("input.txt");
 
-    println!("{:#?}", Map::parse(example));
-    for d in Direction::ALL {
-        println!("{:#?} {}", d, d.bit_value());
-    }
+    let mut map = Map::parse(text);
+
+    let path = map.find_path();
+    println!("{}", path.len());
+
+    map.fill_in_start(&path[0], &path[path.len() - 2]);
+
+    let pipeSet = path.into_iter().collect::<HashSet<Location>>();
+    map.clear_debris(pipeSet);
+    println!("{:#?}", &map);
+
     Ok(())
 }
 
@@ -209,5 +356,13 @@ mod tests {
         assert_eq!(Pipe::N_E.follow(Direction::East), Some(Direction::North));
         assert_eq!(Pipe::N_E.follow(Direction::South), None);
         assert_eq!(Pipe::N_E.follow(Direction::West), None);
+    }
+
+    #[test]
+    pub fn pipe_parse_debug_roundtrip() {
+        const PIPE_CHARS: &str = "-|F7JL";
+        for c in PIPE_CHARS.chars() {
+            assert_eq!(format!("{:#?}", Pipe::parse(c).unwrap()), format!("{}", c));
+        }
     }
 }
