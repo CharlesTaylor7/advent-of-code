@@ -38,6 +38,43 @@ impl Direction {
     }
 }
 
+#[derive(Debug)]
+struct Location {
+    pub row: usize,
+    pub col: usize,
+}
+impl Location {
+    pub fn advance(&self, dir: Direction) -> Self {
+        match dir {
+            Direction::North => Self {
+                row: self.row - 1,
+                col: self.col,
+            },
+
+            Direction::East => Self {
+                row: self.row,
+                col: self.col + 1,
+            },
+
+            Direction::West => Self {
+                row: self.row,
+                col: self.col - 1,
+            },
+
+            Direction::South => Self {
+                row: self.row + 1,
+                col: self.col,
+            },
+        }
+    }
+}
+
+enum PathStep {
+    Next(Location, Direction),
+    Done,
+    Failure,
+}
+
 // Row major order matrix of map
 #[derive(Debug)]
 struct Map {
@@ -45,12 +82,6 @@ struct Map {
     width: usize,
     start: Location,
     data: Vec<Tile>,
-}
-
-#[derive(Debug)]
-struct Location {
-    pub row: usize,
-    pub col: usize,
 }
 
 impl Map {
@@ -78,26 +109,48 @@ impl Map {
         }
     }
 
-    pub fn lookup(&self, location: &Location) -> Tile {
-        self.data[location.row * self.width + location.col]
+    pub fn lookup(&self, location: &Location) -> Option<Tile> {
+        let index: usize = location.row * self.width + location.col;
+        self.data.get(index).cloned()
+    }
+
+    pub fn find_path(&self) -> Vec<Location> {
+        vec![]
+    }
+
+    pub fn step(&self, loc: &Location, from: Direction) -> PathStep {
+        let cell = self.lookup(loc);
+        match cell {
+            None => PathStep::Failure,
+            Some(Tile::Empty(_)) => PathStep::Failure,
+            Some(Tile::Start) => PathStep::Done,
+            Some(Tile::Pipe(pipe)) => match pipe.follow(from) {
+                None => PathStep::Failure,
+                Some(nextDir) => PathStep::Next(loc.advance(nextDir), nextDir.opposite()),
+            },
+        }
     }
 }
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 enum Tile {
     Pipe(Pipe),
-    Empty,
+    Empty(Option<Tag>),
     Start,
-    Exterior,
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+enum Tag {
     Interior,
+    Exterior,
 }
 
 impl Tile {
     pub fn parse(text: char) -> Self {
         match text {
-            '.' => Tile::Empty,
+            '.' => Tile::Empty(None),
             'S' => Tile::Start,
-            _ => Pipe::parse(text).map_or(Tile::Empty, Tile::Pipe),
+            _ => Pipe::parse(text).map_or(Tile::Empty(None), Tile::Pipe),
         }
     }
 }
