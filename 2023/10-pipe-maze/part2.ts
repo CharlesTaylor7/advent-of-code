@@ -5,30 +5,33 @@ import path from "node:path";
 
 type TestCase = "input.txt" | "example.txt";
 
-type Location = { row: number; col: number };
-type Direction = "N" | "E" | "W" | "S";
-type Tile = "." | "S" | Pipe;
+type Location = Readonly<{ 
+  row: number; col: number 
+}>;
+type Direction = 'N' | 'E' | 'W' | 'S';
+type Tile = '.' | 'S' | Pipe;
 
-type Pipe = "|" | "-" | "7" | "J" | "F" | "L";
+type Pipe = '|' | '-' | '7' | 'J' | 'F' | 'L';
 
-const directions: Direction[] = ["N", "E", "W", "S"];
+const directions: Direction[] = ['N', 'E', 'W', 'S'];
 const pipes: Record<Pipe, [Direction, Direction]> = {
-  "|": ["N", "S"],
-  "-": ["E", "W"],
-  F: ["S", "E"],
-  "7": ["S", "W"],
-  J: ["N", "W"],
-  L: ["N", "E"],
+  '|': ['N', 'S'],
+  '-': ['E', 'W'],
+  'F': ['S', 'E'],
+  '7': ['S', 'W'],
+  'J': ['N', 'W'],
+  'L': ['N', 'E'],
 };
 
 const opposite: Record<Direction, Direction> = {
-  N: "S",
-  E: "W",
-  W: "E",
-  S: "N",
+  N: 'S',
+  E: 'W',
+  W: 'E',
+  S: 'N',
 };
 
-async function main(testCase: TestCase = "example.txt") {
+
+async function parse(testCase: TestCase): Promise<[string[], Location]> {
   let map: string[] = [];
   let width = 0;
   let row = 0;
@@ -47,6 +50,12 @@ async function main(testCase: TestCase = "example.txt") {
     row++;
   }
   file.close();
+  return [map, start];
+}
+
+
+async function main(testCase: TestCase = "example.txt") {
+  const [map, start] = await parse(testCase);
 
   function lookup(loc: Location): Tile | undefined {
     const row = map[loc.row];
@@ -55,7 +64,7 @@ async function main(testCase: TestCase = "example.txt") {
     return row[loc.col] as Tile | undefined;
   }
 
-  function checkPath(loc: Location, from: Direction): Direction | boolean {
+  function checkPath(loc: Location, from: Direction): [Location, Direction] | boolean {
     // console.log({loc, from});
     const cell = lookup(loc);
     if (!cell) return false;
@@ -69,37 +78,37 @@ async function main(testCase: TestCase = "example.txt") {
     const nextDir = dirs[(i + 1) % 2];
     const c = opposite[nextDir];
 
-    advance(loc, nextDir);
-    return c;
+    return [advance(loc, nextDir), c];
   }
 
-  function advance(current: Location, dir: Direction) {
-    if (dir === "N") current.row--;
-    else if (dir === "S") current.row++;
-    else if (dir === "E") current.col++;
-    else if (dir === "W") current.col--;
+  function advance(current: Location, dir: Direction): Location {
+    if (dir === "N") return ({ row: current.row - 1, col: current.col });
+    else if (dir === "S") return ({ row: current.row + 1, col: current.col });
+    else if (dir === "E") return ({ row: current.row, col: current.col + 1 });
+    else if (dir === "W") return ({ row: current.row, col: current.col - 1 });
     else {
       dir satisfies never;
+      throw new Error();
     }
   }
 
   type PathState = {
-    loc: Location;
+    locations: Location[];
     from: Direction | false;
   };
 
   const paths: PathState[] = [];
   for (let d of directions) {
-    const copy = { ...start };
-    advance(copy, d);
-    paths.push({ loc: copy, from: opposite[d] });
+    paths.push({ 
+      locations: [start, advance(start, d)], 
+      from: opposite[d]
+    });
   }
-
-  // console.log("start", start);
 
   for (let d = 1; ; d++) {
     for (let i = 0; i < paths.length; i++) {
-      const { loc, from } = paths[i];
+      const { locations, from } = paths[i];
+      const loc = locations[locations.length - 1];
       if (!from) continue;
       const next = checkPath(loc, from);
       if (next === true) {
@@ -107,8 +116,14 @@ async function main(testCase: TestCase = "example.txt") {
         console.log("furthest length", d / 2);
         return;
       }
-      // @ts-ignore
-      paths[i].from = next;
+      else if (next === false) {
+        paths[i].from = false 
+      }
+      else {
+        const [l,d] = next;
+        paths[i].locations.push(l);
+        paths[i].from = d;
+      }
     }
   }
 }
