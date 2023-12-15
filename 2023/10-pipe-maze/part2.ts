@@ -2,7 +2,6 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import test from "node:test";
 
 type TestCase = 
   "input.txt" | "example.txt" | "example2.txt";
@@ -54,7 +53,7 @@ async function parse(testCase: TestCase): Promise<[string[], Location]> {
 }
 
 
-async function findPath(map: string[], start: Location): Location[]{
+function findPath(map: string[], start: Location): Location[]{
   function lookup(loc: Location): Tile | undefined {
     const row = map[loc.row];
     if (!row) return undefined;
@@ -77,17 +76,6 @@ async function findPath(map: string[], start: Location): Location[]{
     const c = opposite[nextDir];
 
     return [advance(loc, nextDir), c];
-  }
-
-  function advance(current: Location, dir: Direction): Location {
-    if (dir === "N") return ({ row: current.row - 1, col: current.col });
-    else if (dir === "S") return ({ row: current.row + 1, col: current.col });
-    else if (dir === "E") return ({ row: current.row, col: current.col + 1 });
-    else if (dir === "W") return ({ row: current.row, col: current.col - 1 });
-    else {
-      dir satisfies never;
-      throw new Error();
-    }
   }
 
   type PathState = {
@@ -124,8 +112,60 @@ async function findPath(map: string[], start: Location): Location[]{
   }
 }
 
-async function main(testCase: TestCase) {
- const [map, start] = parse(testCase); 
+function advance(current: Location, dir: Direction): Location {
+  if (dir === "N") return ({ row: current.row - 1, col: current.col });
+  else if (dir === "S") return ({ row: current.row + 1, col: current.col });
+  else if (dir === "E") return ({ row: current.row, col: current.col + 1 });
+  else if (dir === "W") return ({ row: current.row, col: current.col - 1 });
+  else {
+    dir satisfies never;
+    throw new Error();
+  }
 }
 
-main("example2.txt").then(console.log);
+
+async function main(testCase: TestCase) {
+ const [map, start] = await parse(testCase); 
+ const locations = findPath(map, start);
+
+ const pipeSet: Set<number> = new Set();
+ for (let loc of locations) {
+  pipeSet.add(map[0].length * loc.row + loc.col);
+ }
+
+ let tally = 0;
+ for (let col = 0; col < map[0].length; col++) {
+  for (let row = 0; row < map.length; row++) {
+    tally += interiorLocation({row,col}, map, pipeSet) ? 1 : 0;
+  }
+ }
+ console.log(tally);
+}
+
+function interiorLocation(loc: Location, map: string[], pipes: Set<number>): boolean {
+  const height = map.length;
+  const width = map[0].length;
+
+  // pipes are not interior
+  if (pipes.has(loc.row * width + loc.col)) return false
+  
+  // map's border is not interior 
+  if (loc.col === 0 || loc.row === 0 || loc.col === width - 1 || loc.row === height - 1) return false 
+
+  // ray to the west
+  let tally = 0;
+  let current = loc;
+  while (current.col >= 0) {
+    current = advance(current, 'W');
+    if (pipes.has(current.row * width + current.col)) {
+      const tile = map[current.row][current.col];
+      if (tile !== '-') {
+        tally++;
+      }
+    }
+  }
+
+  return tally % 2 === 1 ;
+}
+
+main("input.txt")
