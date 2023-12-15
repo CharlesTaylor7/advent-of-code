@@ -2,8 +2,10 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import test from "node:test";
 
-type TestCase = "input.txt" | "example.txt";
+type TestCase = 
+  "input.txt" | "example.txt" | "example2.txt";
 
 type Location = Readonly<{ 
   row: number; col: number 
@@ -33,13 +35,11 @@ const opposite: Record<Direction, Direction> = {
 
 async function parse(testCase: TestCase): Promise<[string[], Location]> {
   let map: string[] = [];
-  let width = 0;
   let row = 0;
   let start = { row: -1, col: -1 };
   // stream line by line
   const file = await fs.open(path.join(__dirname, testCase));
   for await (const line of file.readLines()) {
-    width = line.length;
     const match = line.match(/S/);
     // console.log(line);
     if (match?.index !== undefined) {
@@ -54,9 +54,7 @@ async function parse(testCase: TestCase): Promise<[string[], Location]> {
 }
 
 
-async function main(testCase: TestCase = "example.txt") {
-  const [map, start] = await parse(testCase);
-
+async function findPath(map: string[], start: Location): Location[]{
   function lookup(loc: Location): Tile | undefined {
     const row = map[loc.row];
     if (!row) return undefined;
@@ -112,9 +110,7 @@ async function main(testCase: TestCase = "example.txt") {
       if (!from) continue;
       const next = checkPath(loc, from);
       if (next === true) {
-        console.log("path length", d);
-        console.log("furthest length", d / 2);
-        return;
+        return locations;
       }
       else if (next === false) {
         paths[i].from = false 
@@ -128,4 +124,8 @@ async function main(testCase: TestCase = "example.txt") {
   }
 }
 
-main("input.txt");
+async function main(testCase: TestCase) {
+ const [map, start] = parse(testCase); 
+}
+
+main("example2.txt").then(console.log);
