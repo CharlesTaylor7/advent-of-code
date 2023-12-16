@@ -39,10 +39,16 @@ impl Direction {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct Location {
     pub row: usize,
     pub col: usize,
+}
+
+impl std::fmt::Debug for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "({}, {})", self.col, self.row)
+    }
 }
 
 impl Location {
@@ -106,7 +112,6 @@ struct PathState {
 }
 
 // Row major order matrix of map
-//#[derive()]
 struct Map {
     pub height: usize,
     pub width: usize,
@@ -228,6 +233,85 @@ impl Map {
             }
         }
     }
+
+    pub fn raycast_test(&mut self) {
+        for row in 0..self.height {
+            for col in 0..self.width {
+                let mut current = Location { row, col };
+                if self.lookup(&current) != Some(Tile::Empty(None)) {
+                    continue;
+                }
+
+                let mut tally = 0;
+                while current.col != 0 {
+                    current = current.advance(Direction::West);
+                    if let Some(tile) = self.lookup(&current) {
+                        if !tile.is_empty() && tile != Tile::Pipe(Pipe::E_W) {
+                            tally += 1;
+                        }
+                    }
+                }
+                self.update(
+                    &Location { row, col },
+                    Tile::Empty(Some(if tally % 2 == 1 {
+                        Tag::Interior
+                    } else {
+                        Tag::Exterior
+                    })),
+                );
+            }
+        }
+    }
+
+    pub fn winding_number(&mut self, loc: &Location, path: &[Location]) -> i32 {
+        // dbg!(loc);
+        let mut winding = 0;
+
+        let mut dy: isize = (self.start.row as isize) - (loc.row as isize);
+        for i in 0..path.len() {
+            let current = &path[i];
+            if current.row == loc.row && current.col > loc.col {
+                if let Some(Tile::Pipe(pipe)) = self.lookup(current) {
+                    if pipe.has(Direction::North) && dy == 1 {
+                        winding += 1;
+                    }
+                    if pipe.has(Direction::South) && dy == -1 {
+                        winding -= 1;
+                    }
+                    //dbg!(pipe, winding);
+                }
+            }
+            let delta = (current.row as isize) - (loc.row as isize);
+            if delta != 0 {
+                dy = delta;
+            }
+        }
+
+        //println!("{:#?} {}", loc, winding);
+        return winding;
+    }
+
+    pub fn winding_test(&mut self, path: Vec<Location>) -> usize {
+        let mut tally = 0;
+        for row in 0..self.height {
+            for col in 0..self.width {
+                let current = Location { row, col };
+                if self.lookup(&current) != Some(Tile::Empty(None)) {
+                    continue;
+                }
+                let tag = if self.winding_number(&current, &path) % 2 == 0 {
+                    Tag::Exterior
+                } else {
+                    Tag::Interior
+                };
+                if tag == Tag::Interior {
+                    tally += 1;
+                }
+                self.update(&current, Tile::Empty(Some(tag)));
+            }
+        }
+        tally
+    }
 }
 
 #[derive(PartialEq, Eq, Copy, Clone)]
@@ -245,11 +329,19 @@ impl std::fmt::Debug for Tile {
             match self {
                 Tile::Pipe(pipe) => format!("{:#?}", pipe),
                 Tile::Empty(None) => ".".to_owned(),
-                Tile::Empty(Some(Tag::Interior)) => "I".to_owned(),
-                Tile::Empty(Some(Tag::Exterior)) => "O".to_owned(),
+                Tile::Empty(Some(Tag::Exterior)) => ".".to_owned(),
+                Tile::Empty(Some(Tag::Interior)) => "*".to_owned(),
                 Tile::Start => "S".to_owned(),
             }
         )
+    }
+}
+impl Tile {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Tile::Empty(_) => true,
+            _ => false,
+        }
     }
 }
 
@@ -319,6 +411,10 @@ impl Pipe {
         }
     }
 
+    pub fn has(&self, dir: Direction) -> bool {
+        self.0 & dir.bit_value() > 0
+    }
+
     pub fn follow(&self, from: Direction) -> Option<Direction> {
         let test = self.0 & from.bit_value();
         if test > 0 {
@@ -335,13 +431,17 @@ fn main() -> std::io::Result<()> {
     let mut map = Map::parse(text);
 
     let path = map.find_path();
-    println!("{}", path.len());
+    // println!("{}", path.len());
 
     map.fill_in_start(&path[0], &path[path.len() - 2]);
 
-    let pipeSet = path.into_iter().collect::<HashSet<Location>>();
-    map.clear_debris(pipeSet);
-    println!("{:#?}", &map);
+    let pipes = path.iter().cloned().collect::<HashSet<Location>>();
+    map.clear_debris(pipes);
+    //println!("{:#?}", &map);
+
+    let tally = map.winding_test(path);
+    println!("{}", tally);
+    //println!("{:#?}", &map);
 
     Ok(())
 }
