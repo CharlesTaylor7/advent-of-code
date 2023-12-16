@@ -100,7 +100,7 @@ impl SpringRow {
 }
 
 fn main() {
-    let text = include_str!("example.txt");
+    let text = include_str!("example2.txt");
     let mut part1: Vec<SpringRow> = text
         .lines()
         .map(|line| {
@@ -131,13 +131,6 @@ fn main() {
         part1
             .iter()
             .map(|row| {
-                /*
-                let mut springs = Vec::with_capacity(5 * (row.springs.len() + 1) - 1);
-                for _ in 0..5 {
-                    springs.extend_from_slice(&row.springs);
-                    springs.push(Spring::Unknown);
-                }
-                */
                 let unknown = vec![Spring::Unknown];
                 let springs = (0..5)
                     .map(|_| &row.springs)
