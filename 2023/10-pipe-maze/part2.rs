@@ -1,6 +1,5 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
-#![allow(non_snake_case)]
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -182,7 +181,7 @@ impl Map {
             Some(Tile::Start) => PathStep::Done,
             Some(Tile::Pipe(pipe)) => match pipe.follow(from) {
                 None => PathStep::Failure,
-                Some(nextDir) => PathStep::Next(loc.advance(nextDir), nextDir.opposite()),
+                Some(next) => PathStep::Next(loc.advance(next), next.opposite()),
             },
         }
     }
@@ -212,12 +211,12 @@ impl Map {
         }
     }
     pub fn fill_in_start(&mut self, first: &Location, last: &Location) {
-        let startPipe = Pipe::create(
+        let start_pipe = Pipe::create(
             first.diff_adjacent(&self.start).unwrap(),
             last.diff_adjacent(&self.start).unwrap(),
         );
 
-        self.update(&self.start.clone(), Tile::Pipe(startPipe));
+        self.update(&self.start.clone(), Tile::Pipe(start_pipe));
     }
 
     pub fn clear_debris(&mut self, pipes: HashSet<Location>) {
