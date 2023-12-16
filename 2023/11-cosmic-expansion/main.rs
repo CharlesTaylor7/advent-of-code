@@ -1,25 +1,5 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(dead_code)]
-use std::fmt::{Debug, Formatter};
-///
-/// struct Map {
-///     pub width: usize,
-///     pub height: usize,
-///     data: Vec<Tile>,
-/// }
-///
-/// impl Map {
-///     pub fn lookup(&self, x: usize, y: usize) -> Tile {
-///
-///     }
-///     pub fn from_str(text:
-/// }
-///
-///
 #[derive(PartialEq)]
 enum Tile {
     Empty,
@@ -31,7 +11,7 @@ struct Point {
     pub y: usize,
 }
 fn main() -> std::io::Result<()> {
-    let text = include_str!("example.txt");
+    let text = include_str!("input.txt");
 
     let mut data: Vec<Tile> = Vec::with_capacity(text.len());
     let mut galaxies: Vec<Point> = Vec::new();
@@ -53,56 +33,44 @@ fn main() -> std::io::Result<()> {
         height += 1;
     }
 
-    let mut expanded_rows: Vec<usize> = Vec::with_capacity(height);
-    for j in 0..height {
-        if (0..width).all(|i| data[j * width + i] == Tile::Empty) {
-            expanded_rows.push(j)
-        }
-    }
+    let expanded_rows: Vec<usize> = (0..height)
+        .filter(|j| (0..width).all(|i| data[j * width + i] == Tile::Empty))
+        .collect();
 
-    let mut expanded_cols: Vec<usize> = Vec::with_capacity(width);
-    for i in 0..width {
-        if (0..height).all(|j| data[j * width + i] == Tile::Empty) {
-            expanded_cols.push(i)
-        }
-    }
+    let expanded_cols: Vec<usize> = (0..width)
+        .filter(|i| (0..width).all(|j| data[j * width + i] == Tile::Empty))
+        .collect();
 
-    let mut tally = 0;
+    let mut distance = 0;
+    let mut lines_crossed = 0;
     for i in 0..galaxies.len() {
         for j in (i + 1)..galaxies.len() {
             let a = &galaxies[i];
             let b = &galaxies[j];
             let dx = (b.x as isize) - (a.x as isize);
             let dy = (b.y as isize) - (a.y as isize);
-            // manhattan distance
-            let mut distance = dx.abs() + dy.abs();
-            // count the number of expanded rows and columns crossed
-            distance += expanded_rows
+            let manhattan = dx.abs() + dy.abs();
+            let (start_x, end_x) = if a.x < b.x { (a.x, b.x) } else { (b.x, a.x) };
+            let (start_y, end_y) = if a.y < b.y { (a.y, b.y) } else { (b.y, a.y) };
+
+            let rows_crossed = expanded_rows
                 .iter()
                 .cloned()
-                .filter(|j| *j > a.y && *j < b.y)
+                .filter(|j| *j > start_y && *j < end_y)
                 .count() as isize;
-            distance += expanded_cols
+            let cols_crossed = expanded_cols
                 .iter()
                 .cloned()
-                .filter(|i| *i > a.x && *i < b.x)
+                .filter(|i| *i > start_x && *i < end_x)
                 .count() as isize;
-            println!("{} to {}: {}", i + 1, j + 1, distance);
-            tally += distance;
+
+            distance += manhattan;
+            lines_crossed += rows_crossed + cols_crossed;
         }
     }
 
-    println!("Part 1: {}", tally);
+    println!("Part 1: {}", distance + lines_crossed);
+    println!("Part 2: {}", distance + 999_999 * lines_crossed);
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::*;
-
-    #[test]
-    pub fn dummy() {
-        assert_eq!(2 + 2, 4);
-    }
 }
