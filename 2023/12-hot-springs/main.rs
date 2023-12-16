@@ -43,14 +43,14 @@ impl SpringRow {
     }
 
     pub fn ways(&mut self) -> usize {
-        dbg!(&self);
         let mut cache = HashMap::with_capacity(self.springs.len() * self.counts.len());
-        self.ways_rec(&mut cache, 0, 0, 0, None)
+        let tally = self.ways_rec(&mut cache, 0, 0, 0, None);
+        tally
     }
 
     fn ways_rec(
         &self,
-        cache: &mut HashMap<usize, usize>,
+        cache: &mut HashMap<String, usize>,
         s: usize,
         c: usize,
         run: usize,
@@ -68,7 +68,9 @@ impl SpringRow {
                 0
             };
         }
-        let key = s * self.counts.len() + c;
+        let key = format!("{s}-{c}-{run}");
+        // optimized version:
+        // let key =  s * self.counts.len() + c;
 
         if spring.is_none() && let Some(v) = cache.get(&key) {
             return *v;
@@ -102,7 +104,7 @@ impl SpringRow {
 }
 
 fn main() {
-    let text = include_str!("example2.txt");
+    let text = include_str!("input.txt");
     let mut part1: Vec<SpringRow> = text
         .lines()
         .map(|line| {
