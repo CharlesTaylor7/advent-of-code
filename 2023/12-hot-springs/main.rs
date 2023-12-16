@@ -7,7 +7,7 @@
 #![allow(unreachable_code)]
 use std::fmt::{Debug, Formatter};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Spring {
     Working,
     Broken,
@@ -22,10 +22,10 @@ struct SpringRow {
 impl SpringRow {
     pub fn ways(&self) -> usize {
         //(self);
-        self.ways_rec(0, 0, 0)
+        self.ways_rec(0, 0, 0, None)
     }
 
-    fn ways_rec(&self, s: usize, c: usize, run: usize) -> usize {
+    fn ways_rec(&self, s: usize, c: usize, run: usize, spring: Option<Spring>) -> usize {
         // println!("s: {}, c: {}, run: {}", s, c, run);
         let max_s = self.springs.len() - 1;
         let max_c = self.counts.len() - 1;
@@ -39,32 +39,33 @@ impl SpringRow {
             };
         }
 
-        match self.springs[s] {
+        match spring.unwrap_or(self.springs[s]) {
             Spring::Broken => {
-                if run < self.counts[c] {
-                    self.ways_rec(s + 1, c, run + 1)
+                if self.counts.get(c).map_or(false, |count| run < *count) {
+                    self.ways_rec(s + 1, c, run + 1, None)
                 } else {
                     0
                 }
             }
             Spring::Working => {
                 if run == 0 {
-                    self.ways_rec(s + 1, c, 0)
+                    self.ways_rec(s + 1, c, 0, None)
                 } else if self.counts.get(c).map_or(false, |x| *x == run) {
-                    self.ways_rec(s + 1, c + 1, 0)
+                    self.ways_rec(s + 1, c + 1, 0, None)
                 } else {
                     0
                 }
             }
             Spring::Unknown => {
-                todo!();
+                self.ways_rec(s, c, run, Some(Spring::Working))
+                    + self.ways_rec(s, c, run, Some(Spring::Broken))
             }
         }
     }
 }
 
 fn main() {
-    let text = include_str!("example2.txt");
+    let text = include_str!("input.txt");
     let tally: usize = text
         .lines()
         .map(|line| {
