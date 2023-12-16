@@ -5,13 +5,12 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 #![allow(unreachable_code)]
-use std::fmt::{Debug, Formatter};
 
 enum Dummy {}
 
-impl Debug for Dummy {
+impl std::fmt::Debug for Dummy {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        unreachable!()
+        write!(f, "{}", 42)
     }
 }
 

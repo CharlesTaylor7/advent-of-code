@@ -1,12 +1,7 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(unreachable_code)]
-use std::collections::hash_map::{Entry, HashMap};
-use std::fmt::{Debug, Formatter};
+#![feature(iter_intersperse)]
+use std::collections::hash_map::HashMap;
 
 #[derive(Debug, Clone, Copy)]
 enum Spring {
@@ -14,33 +9,44 @@ enum Spring {
     Broken,
     Unknown,
 }
-#[derive(Debug)]
 struct SpringRow {
     pub springs: Vec<Spring>,
     pub counts: Vec<usize>,
-    //cache: HashMap<usize, usize>,
+}
+
+impl std::fmt::Debug for SpringRow {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {}",
+            self.springs
+                .iter()
+                .map(|s| match s {
+                    Spring::Broken => '#',
+                    Spring::Working => '.',
+                    Spring::Unknown => '?',
+                })
+                .collect::<String>(),
+            self.counts
+                .iter()
+                .map(|x| x.to_string())
+                .intersperse(",".to_owned())
+                .collect::<String>()
+        )
+    }
 }
 
 impl SpringRow {
     pub fn new(springs: Vec<Spring>, counts: Vec<usize>) -> Self {
-        Self {
-            springs,
-            counts,
-            //   cache,
-        }
+        Self { springs, counts }
     }
 
     pub fn ways(&mut self) -> usize {
+        dbg!(&self);
         let mut cache = HashMap::with_capacity(self.springs.len() * self.counts.len());
         self.ways_rec(&mut cache, 0, 0, 0, None)
     }
 
-    /*
-    fn ways_cache(&mut self, s: usize, c: usize) -> Entry<usize, usize> {
-    }
-    */
-
-    // figure out how to memoize this
     fn ways_rec(
         &self,
         cache: &mut HashMap<usize, usize>,
@@ -49,7 +55,7 @@ impl SpringRow {
         run: usize,
         spring: Option<Spring>,
     ) -> usize {
-        // println!("s: {}, c: {}, run: {}", s, c, run);
+        //println!("s: {}, c: {}, run: {}", s, c, run);
         let max_s = self.springs.len() - 1;
         let max_c = self.counts.len() - 1;
         if s > max_s {
@@ -94,7 +100,7 @@ impl SpringRow {
 }
 
 fn main() {
-    let text = include_str!("input.txt");
+    let text = include_str!("example.txt");
     let mut part1: Vec<SpringRow> = text
         .lines()
         .map(|line| {
@@ -125,11 +131,20 @@ fn main() {
         part1
             .iter()
             .map(|row| {
+                /*
                 let mut springs = Vec::with_capacity(5 * (row.springs.len() + 1) - 1);
                 for _ in 0..5 {
                     springs.extend_from_slice(&row.springs);
                     springs.push(Spring::Unknown);
                 }
+                */
+                let unknown = vec![Spring::Unknown];
+                let springs = (0..5)
+                    .map(|_| &row.springs)
+                    .intersperse(&unknown)
+                    .flatten()
+                    .copied()
+                    .collect();
                 SpringRow::new(springs, row.counts.repeat(5)).ways()
             })
             .sum::<usize>()
