@@ -1,6 +1,7 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
 #![feature(iter_intersperse)]
+#![feature(let_chains)]
 use std::collections::hash_map::HashMap;
 
 #[derive(Debug, Clone, Copy)]
@@ -69,11 +70,9 @@ impl SpringRow {
         }
         let key = s * self.counts.len() + c;
 
-        /*
-        if let Some(v) = cache.get(&key) {
+        if spring.is_none() && let Some(v) = cache.get(&key) {
             return *v;
         }
-        */
 
         let ways = match spring.unwrap_or(self.springs[s]) {
             Spring::Broken => {
