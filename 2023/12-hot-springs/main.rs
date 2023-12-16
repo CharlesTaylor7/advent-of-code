@@ -66,7 +66,7 @@ impl SpringRow {
 
 fn main() {
     let text = include_str!("input.txt");
-    let tally: usize = text
+    let part1: Vec<SpringRow> = text
         .lines()
         .map(|line| {
             let split = line.split(" ").collect::<Vec<_>>();
@@ -82,13 +82,33 @@ fn main() {
 
             let counts = split[1].split(",").map(|x| x.parse().unwrap()).collect();
 
-            let row = SpringRow { springs, counts };
-
-            row.ways()
+            SpringRow { springs, counts }
         })
-        .sum();
+        .collect();
 
-    println!("Part 1: {}", tally);
+    println!(
+        "Part 1: {}",
+        part1.iter().map(|row| row.ways()).sum::<usize>()
+    );
+
+    println!(
+        "Part 2: {}",
+        part1
+            .iter()
+            .map(|row| {
+                let mut springs = Vec::with_capacity(5 * (row.springs.len() + 1) - 1);
+                for _ in 0..5 {
+                    springs.extend_from_slice(&row.springs);
+                    springs.push(Spring::Unknown);
+                }
+                SpringRow {
+                    springs,
+                    counts: row.counts.repeat(5),
+                }
+                .ways()
+            })
+            .sum::<usize>()
+    );
 }
 
 #[cfg(test)]
