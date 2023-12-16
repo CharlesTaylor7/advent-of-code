@@ -6,17 +6,46 @@
 #![allow(dead_code)]
 use std::fmt::{Debug, Formatter};
 
-enum Dummy {}
-
-impl Debug for Dummy {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        unreachable!()
-    }
+#[derive(Debug)]
+enum Spring {
+    Working,
+    Broken,
+    Unknown,
 }
 
-fn main() -> std::io::Result<()> {
+fn ways(springs: &[Spring], conditions: &[usize]) -> usize {
+    //todo!()
+    2
+}
+
+fn main() {
     let text = include_str!("example.txt");
-    Ok(())
+    let tally: usize = text
+        .lines()
+        .map(|line| {
+            let split = line.split(" ").collect::<Vec<_>>();
+            let springs = split[0]
+                .chars()
+                .map(|c| match c {
+                    '.' => Spring::Working,
+                    '#' => Spring::Broken,
+                    '?' => Spring::Unknown,
+                    _ => panic!(),
+                })
+                .collect::<Vec<_>>();
+
+            let conditions = split[1]
+                .split(",")
+                .map(|x| x.parse().unwrap())
+                .collect::<Vec<_>>();
+
+            println!("springs: {:#?}", springs);
+            println!("conditions: {:#?}", conditions);
+            ways(&springs, &conditions)
+        })
+        .sum();
+
+    println!("Part 1: {}", tally);
 }
 
 #[cfg(test)]

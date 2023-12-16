@@ -14,9 +14,10 @@ impl Debug for Dummy {
     }
 }
 
-fn main() -> std::io::Result<()> {
-    let text = include_str!("example.txt");
-    Ok(())
+fn main() {
+    let input = include_str!("example.txt");
+    println!("Input: {input}");
+    println!("Part 1: {}", 42);
 }
 
 #[cfg(test)]
