@@ -17,15 +17,26 @@ enum Spring {
 struct SpringRow {
     pub springs: Vec<Spring>,
     pub counts: Vec<usize>,
+    cache: Vec<usize>,
 }
 
 impl SpringRow {
-    pub fn ways(&self) -> usize {
+    pub fn new(springs: Vec<Spring>, counts: Vec<usize>) -> Self {
+        let cache = Vec::with_capacity(springs.len() * counts.len());
+        Self {
+            springs,
+            counts,
+            cache,
+        }
+    }
+
+    pub fn ways(&mut self) -> usize {
         //(self);
         self.ways_rec(0, 0, 0, None)
     }
 
-    fn ways_rec(&self, s: usize, c: usize, run: usize, spring: Option<Spring>) -> usize {
+    // figure out how to memoize this
+    fn ways_rec(&mut self, s: usize, c: usize, run: usize, spring: Option<Spring>) -> usize {
         // println!("s: {}, c: {}, run: {}", s, c, run);
         let max_s = self.springs.len() - 1;
         let max_c = self.counts.len() - 1;
@@ -66,7 +77,7 @@ impl SpringRow {
 
 fn main() {
     let text = include_str!("input.txt");
-    let part1: Vec<SpringRow> = text
+    let mut part1: Vec<SpringRow> = text
         .lines()
         .map(|line| {
             let split = line.split(" ").collect::<Vec<_>>();
@@ -82,13 +93,13 @@ fn main() {
 
             let counts = split[1].split(",").map(|x| x.parse().unwrap()).collect();
 
-            SpringRow { springs, counts }
+            SpringRow::new(springs, counts)
         })
         .collect();
 
     println!(
         "Part 1: {}",
-        part1.iter().map(|row| row.ways()).sum::<usize>()
+        part1.iter_mut().map(|row| row.ways()).sum::<usize>()
     );
 
     println!(
@@ -101,11 +112,7 @@ fn main() {
                     springs.extend_from_slice(&row.springs);
                     springs.push(Spring::Unknown);
                 }
-                SpringRow {
-                    springs,
-                    counts: row.counts.repeat(5),
-                }
-                .ways()
+                SpringRow::new(springs, row.counts.repeat(5)).ways()
             })
             .sum::<usize>()
     );
