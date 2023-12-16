@@ -5,6 +5,7 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 #![allow(unreachable_code)]
+use std::collections::hash_map::{Entry, HashMap};
 use std::fmt::{Debug, Formatter};
 
 #[derive(Debug, Clone, Copy)]
@@ -17,26 +18,37 @@ enum Spring {
 struct SpringRow {
     pub springs: Vec<Spring>,
     pub counts: Vec<usize>,
-    cache: Vec<usize>,
+    //cache: HashMap<usize, usize>,
 }
 
 impl SpringRow {
     pub fn new(springs: Vec<Spring>, counts: Vec<usize>) -> Self {
-        let cache = Vec::with_capacity(springs.len() * counts.len());
         Self {
             springs,
             counts,
-            cache,
+            //   cache,
         }
     }
 
     pub fn ways(&mut self) -> usize {
-        //(self);
-        self.ways_rec(0, 0, 0, None)
+        let mut cache = HashMap::with_capacity(self.springs.len() * self.counts.len());
+        self.ways_rec(&mut cache, 0, 0, 0, None)
     }
 
+    /*
+    fn ways_cache(&mut self, s: usize, c: usize) -> Entry<usize, usize> {
+    }
+    */
+
     // figure out how to memoize this
-    fn ways_rec(&mut self, s: usize, c: usize, run: usize, spring: Option<Spring>) -> usize {
+    fn ways_rec(
+        &self,
+        cache: &mut HashMap<usize, usize>,
+        s: usize,
+        c: usize,
+        run: usize,
+        spring: Option<Spring>,
+    ) -> usize {
         // println!("s: {}, c: {}, run: {}", s, c, run);
         let max_s = self.springs.len() - 1;
         let max_c = self.counts.len() - 1;
@@ -49,29 +61,35 @@ impl SpringRow {
                 0
             };
         }
+        let key = s * self.counts.len() + c;
+        if let Some(v) = cache.get(&key) {
+            return *v;
+        }
 
-        match spring.unwrap_or(self.springs[s]) {
+        let ways = match spring.unwrap_or(self.springs[s]) {
             Spring::Broken => {
                 if self.counts.get(c).map_or(false, |count| run < *count) {
-                    self.ways_rec(s + 1, c, run + 1, None)
+                    self.ways_rec(cache, s + 1, c, run + 1, None)
                 } else {
                     0
                 }
             }
             Spring::Working => {
                 if run == 0 {
-                    self.ways_rec(s + 1, c, 0, None)
+                    self.ways_rec(cache, s + 1, c, 0, None)
                 } else if self.counts.get(c).map_or(false, |x| *x == run) {
-                    self.ways_rec(s + 1, c + 1, 0, None)
+                    self.ways_rec(cache, s + 1, c + 1, 0, None)
                 } else {
                     0
                 }
             }
             Spring::Unknown => {
-                self.ways_rec(s, c, run, Some(Spring::Working))
-                    + self.ways_rec(s, c, run, Some(Spring::Broken))
+                self.ways_rec(cache, s, c, run, Some(Spring::Working))
+                    + self.ways_rec(cache, s, c, run, Some(Spring::Broken))
             }
-        }
+        };
+        cache.insert(key, ways);
+        ways
     }
 }
 
@@ -116,14 +134,4 @@ fn main() {
             })
             .sum::<usize>()
     );
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::*;
-
-    #[test]
-    pub fn dummy() {
-        assert_eq!(2 + 2, 4);
-    }
 }
