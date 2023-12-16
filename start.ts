@@ -5,10 +5,7 @@ import HtmlParser from "node-html-parser";
 
 const cookie = `session=${process.env.COOKIE_SESSION_ID}`;
 // examples
-// download day 12 year 2022
-// ./index.ts start 2022 12
-// answer part 1
-// ./index.ts answer 2022 12 1 <ans>
+// ./start.ts 2022 12
 
 async function main() {
   const [year, day] = process.argv.slice(2);

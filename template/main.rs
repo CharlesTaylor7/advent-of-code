@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 #![allow(unused_mut)]
 #![allow(unused_variables)]
+#![allow(dead_code)]
 use std::fmt::{Debug, Formatter};
 
 enum Dummy {}
@@ -14,7 +15,7 @@ impl Debug for Dummy {
 }
 
 fn main() -> std::io::Result<()> {
-    let text = include_str!("input.txt");
+    let text = include_str!("example.txt");
     Ok(())
 }
 
