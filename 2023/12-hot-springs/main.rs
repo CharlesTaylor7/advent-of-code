@@ -56,7 +56,6 @@ impl SpringRow {
         run: usize,
         spring: Option<Spring>,
     ) -> usize {
-        //println!("s: {}, c: {}, run: {}", s, c, run);
         let max_s = self.springs.len() - 1;
         let max_c = self.counts.len() - 1;
         if s > max_s {
@@ -69,8 +68,6 @@ impl SpringRow {
             };
         }
         let key = format!("{s}-{c}-{run}");
-        // optimized version:
-        // let key =  s * self.counts.len() + c;
 
         if spring.is_none() && let Some(v) = cache.get(&key) {
             return *v;
