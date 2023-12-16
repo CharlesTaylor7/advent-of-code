@@ -62,8 +62,14 @@ async function main() {
   }
 
   await fs.copyFile(
-    "template.ts",
-    `${dir}/part1.ts`,
+    "template/main.rs",
+    `${dir}/main.rs`,
+    fs.constants.COPYFILE_EXCL,
+  );
+
+  await fs.copyFile(
+    "template/Cargo.toml",
+    `${dir}/Cargo.toml`,
     fs.constants.COPYFILE_EXCL,
   );
 }
