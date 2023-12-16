@@ -4,6 +4,7 @@
 #![allow(unused_mut)]
 #![allow(unused_variables)]
 #![allow(dead_code)]
+#![allow(unreachable_code)]
 use std::fmt::{Debug, Formatter};
 
 enum Dummy {}
