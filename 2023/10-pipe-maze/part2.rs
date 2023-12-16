@@ -1,9 +1,6 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
-#![allow(dead_code)]
 #![allow(non_snake_case)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -200,7 +197,7 @@ impl Map {
         }
         loop {
             for i in 0..4 {
-                let mut state = &mut paths[i];
+                let state = &mut paths[i];
                 match std::mem::replace(&mut state.step, PathStep::Failure) {
                     PathStep::Failure => continue,
                     PathStep::Done => {
@@ -234,37 +231,7 @@ impl Map {
         }
     }
 
-    pub fn raycast_test(&mut self) {
-        for row in 0..self.height {
-            for col in 0..self.width {
-                let mut current = Location { row, col };
-                if self.lookup(&current) != Some(Tile::Empty(None)) {
-                    continue;
-                }
-
-                let mut tally = 0;
-                while current.col != 0 {
-                    current = current.advance(Direction::West);
-                    if let Some(tile) = self.lookup(&current) {
-                        if !tile.is_empty() && tile != Tile::Pipe(Pipe::E_W) {
-                            tally += 1;
-                        }
-                    }
-                }
-                self.update(
-                    &Location { row, col },
-                    Tile::Empty(Some(if tally % 2 == 1 {
-                        Tag::Interior
-                    } else {
-                        Tag::Exterior
-                    })),
-                );
-            }
-        }
-    }
-
     pub fn winding_number(&mut self, loc: &Location, path: &[Location]) -> i32 {
-        // dbg!(loc);
         let mut winding = 0;
 
         let mut dy: isize = (self.start.row as isize) - (loc.row as isize);
@@ -278,7 +245,6 @@ impl Map {
                     if pipe.has(Direction::South) && dy == -1 {
                         winding -= 1;
                     }
-                    //dbg!(pipe, winding);
                 }
             }
             let delta = (current.row as isize) - (loc.row as isize);
@@ -287,7 +253,6 @@ impl Map {
             }
         }
 
-        //println!("{:#?} {}", loc, winding);
         return winding;
     }
 
@@ -334,14 +299,6 @@ impl std::fmt::Debug for Tile {
                 Tile::Start => "S".to_owned(),
             }
         )
-    }
-}
-impl Tile {
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Tile::Empty(_) => true,
-            _ => false,
-        }
     }
 }
 
@@ -431,17 +388,15 @@ fn main() -> std::io::Result<()> {
     let mut map = Map::parse(text);
 
     let path = map.find_path();
-    // println!("{}", path.len());
+    println!("Part 1: {}", path.len() / 2);
 
     map.fill_in_start(&path[0], &path[path.len() - 2]);
 
     let pipes = path.iter().cloned().collect::<HashSet<Location>>();
     map.clear_debris(pipes);
-    //println!("{:#?}", &map);
 
     let tally = map.winding_test(path);
-    println!("{}", tally);
-    //println!("{:#?}", &map);
+    println!("Part 2: {}", tally);
 
     Ok(())
 }
