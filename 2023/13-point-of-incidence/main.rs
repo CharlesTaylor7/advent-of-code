@@ -1,10 +1,5 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(unreachable_code)]
 #![feature(iter_collect_into)]
 
 enum Dummy {}
@@ -53,7 +48,7 @@ impl Grid {
                 }
             }
 
-            return (j) * 100;
+            return j * 100;
         }
 
         panic!("no symmetry")
@@ -83,14 +78,4 @@ fn main() {
     tally += grid.check_symmetry();
 
     println!("Part 1: {}", tally);
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::*;
-
-    #[test]
-    pub fn dummy() {
-        assert_eq!(2 + 2, 4);
-    }
 }
