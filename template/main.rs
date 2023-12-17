@@ -16,7 +16,7 @@ impl std::fmt::Debug for Dummy {
 
 fn main() {
     let input = include_str!("example.txt");
-    println!("Input: {input}");
+    println!("Input:\n{input}");
     println!("Part 1: {}", 42);
 }
 
