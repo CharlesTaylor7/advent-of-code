@@ -28,14 +28,15 @@ impl Grid {
 
     fn col(&self, i: usize) -> String {
         (0..self.height)
-            .map(|j| self.data[(j * self.width) + i])
+            .map(move |j| self.data[(j * self.width) + i])
             .collect()
     }
 
     fn check_symmetry(&self) -> usize {
+        //println!("h={} w={}", self.height, self.width);
         // check columns
         'check_col: for i in 1..self.width {
-            for k in 0..std::cmp::min(i, self.height - j) {
+            for k in 0..std::cmp::min(i, self.width - i) {
                 if self.col(i - k - 1) != self.col(i + k) {
                     continue 'check_col;
                 }
@@ -52,7 +53,7 @@ impl Grid {
                 }
             }
 
-            return j * 100;
+            return (j) * 100;
         }
 
         panic!("no symmetry")
@@ -60,7 +61,7 @@ impl Grid {
 }
 
 fn main() {
-    let input = include_str!("example.txt");
+    let input = include_str!("input.txt");
 
     let mut tally = 0;
     let mut grid: Grid = Grid {
@@ -79,11 +80,9 @@ fn main() {
             line.chars().collect_into(&mut grid.data);
         }
     }
+    tally += grid.check_symmetry();
 
-    println!("Input:\n{input}");
-    println!("Part 1: {}", 42);
-    println!(file!());
-    println!(module_path!());
+    println!("Part 1: {}", tally);
 }
 
 #[cfg(test)]
