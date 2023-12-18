@@ -7,6 +7,8 @@
 #![allow(unreachable_code)]
 #![feature(iter_collect_into)]
 
+use std::{collections::HashSet, fmt::format};
+
 #[derive(Debug, Copy, Clone)]
 enum Direction {
     North,
@@ -23,6 +25,7 @@ impl Direction {
     ];
 }
 
+#[derive(PartialEq)]
 enum Tile {
     Empty,
     Slide,
@@ -53,18 +56,12 @@ impl std::fmt::Debug for Grid {
 }
 
 impl Grid {
-    fn load_after_north_tilt(&self) -> usize {
+    fn load(&self) -> usize {
         let mut tally = 0;
         for i in 0..self.width {
-            let mut level = 0;
             for j in 0..self.height {
-                match self.data[j * self.width + i] {
-                    Tile::Slide => {
-                        tally += self.height - level;
-                        level += 1;
-                    }
-                    Tile::Fixed => level = j + 1,
-                    Tile::Empty => {}
+                if self.data[j * self.width + i] == Tile::Slide {
+                    tally += self.height - j;
                 }
             }
         }
@@ -153,7 +150,7 @@ impl Grid {
 }
 
 fn main() {
-    let input = include_str!("example.txt");
+    let input = include_str!("input.txt");
 
     let mut grid = Grid {
         width: 0,
@@ -172,13 +169,26 @@ fn main() {
             })
             .collect_into(&mut grid.data);
     }
-    println!("Part 1: {}", grid.load_after_north_tilt());
 
-    println!("{input}");
-    for n in 1..4 {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut occ = Vec::with_capacity(3);
+    let mut first = true;
+    for n in 0..1_000_000_000 {
         for d in Direction::ALL {
             grid.tilt(d);
+            if first {
+                println!("Part 1: {}", grid.load());
+                first = false;
+            }
         }
-        println!("After {n} cycles:\n{:#?}", grid)
+        let fresh = seen.insert(format!("{:#?}", grid));
+        if !fresh {
+            occ.push(n as usize);
+            if occ.len() == 3 {
+                break;
+            }
+        }
     }
+    println!("{:#?}", occ);
+    println!("Part 2: {}", grid.load());
 }
