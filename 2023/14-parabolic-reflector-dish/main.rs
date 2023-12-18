@@ -178,11 +178,8 @@ fn main() {
         }
         let text = format!("{:#?}", grid);
         if let Some(p) = seen.insert(text, n) {
-            println!("old: {}, new: {}, diff: {}", p, n, n - p);
-
             let interval = n - p;
             let rest = (CYCLES - p - 1) % interval;
-            println!("interval: {}, rest: {}", interval, rest);
             for _ in 0..rest {
                 for d in Direction::ALL {
                     grid.tilt(d);
