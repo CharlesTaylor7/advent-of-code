@@ -175,10 +175,10 @@ fn main() {
     println!("Part 1: {}", grid.load_after_north_tilt());
 
     println!("{input}");
-    for _ in 0..1 {
+    for n in 1..4 {
         for d in Direction::ALL {
             grid.tilt(d);
-            println!("After {:#?}:\n{:#?}", d, grid)
         }
+        println!("After {n} cycles:\n{:#?}", grid)
     }
 }
