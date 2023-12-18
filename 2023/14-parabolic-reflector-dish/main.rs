@@ -7,12 +7,20 @@
 #![allow(unreachable_code)]
 #![feature(iter_collect_into)]
 
-enum Dummy {}
-
-impl std::fmt::Debug for Dummy {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", 42)
-    }
+#[derive(Debug, Copy, Clone)]
+enum Direction {
+    North,
+    West,
+    South,
+    East,
+}
+impl Direction {
+    const ALL: [Direction; 4] = [
+        Direction::North,
+        Direction::West,
+        Direction::South,
+        Direction::East,
+    ];
 }
 
 enum Tile {
@@ -27,8 +35,25 @@ struct Grid {
     pub data: Vec<Tile>,
 }
 
+impl std::fmt::Debug for Grid {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut data = String::with_capacity((self.width + 1) * self.height);
+        for row in 0..self.height {
+            for col in 0..self.width {
+                data.push(match self.data[row * self.width + col] {
+                    Tile::Empty => '.',
+                    Tile::Slide => 'O',
+                    Tile::Fixed => '#',
+                })
+            }
+            data.push('\n')
+        }
+        write!(f, "{}", data)
+    }
+}
+
 impl Grid {
-    fn load(&self) -> usize {
+    fn load_after_north_tilt(&self) -> usize {
         let mut tally = 0;
         for i in 0..self.width {
             let mut level = 0;
@@ -46,10 +71,34 @@ impl Grid {
 
         tally
     }
+
+    fn tilt(&mut self, direction: Direction) {
+        match direction {
+            Direction::North => self.tilt_north(),
+            _ => todo!(),
+        }
+    }
+
+    fn tilt_north(&mut self) {
+        for i in 0..self.width {
+            let mut row = 0;
+            for j in 0..self.height {
+                match self.data[j * self.width + i] {
+                    Tile::Slide => {
+                        self.data[j * self.width + i] = Tile::Empty;
+                        self.data[row * self.width + i] = Tile::Slide;
+                        row += 1;
+                    }
+                    Tile::Fixed => row = j + 1,
+                    Tile::Empty => {}
+                }
+            }
+        }
+    }
 }
 
 fn main() {
-    let input = include_str!("input.txt");
+    let input = include_str!("example.txt");
 
     let mut grid = Grid {
         width: 0,
@@ -68,16 +117,13 @@ fn main() {
             })
             .collect_into(&mut grid.data);
     }
-    println!("Input:\n{input}");
-    println!("Part 1: {}", grid.load());
-}
+    println!("Part 1: {}", grid.load_after_north_tilt());
 
-#[cfg(test)]
-mod tests {
-    use crate::*;
-
-    #[test]
-    pub fn dummy() {
-        assert_eq!(2 + 2, 4);
+    println!("{input}");
+    for _ in 0..1 {
+        for d in Direction::ALL {
+            grid.tilt(d);
+            println!("\nAfter {:#?}:\n{:#?}", d, grid)
+        }
     }
 }
