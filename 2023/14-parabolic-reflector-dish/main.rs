@@ -1,13 +1,8 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(unreachable_code)]
 #![feature(iter_collect_into)]
 
-use std::{collections::HashSet, fmt::format};
+use std::collections::HashMap;
 
 #[derive(Debug, Copy, Clone)]
 enum Direction {
@@ -170,10 +165,10 @@ fn main() {
             .collect_into(&mut grid.data);
     }
 
-    let mut seen: HashSet<String> = HashSet::new();
-    let mut occ = Vec::with_capacity(3);
+    let mut seen: HashMap<String, usize> = HashMap::new();
     let mut first = true;
-    for n in 0..1_000_000_000 {
+    const CYCLES: usize = 1_000_000_000;
+    for n in 0..CYCLES {
         for d in Direction::ALL {
             grid.tilt(d);
             if first {
@@ -181,14 +176,20 @@ fn main() {
                 first = false;
             }
         }
-        let fresh = seen.insert(format!("{:#?}", grid));
-        if !fresh {
-            occ.push(n as usize);
-            if occ.len() == 3 {
-                break;
+        let text = format!("{:#?}", grid);
+        if let Some(p) = seen.insert(text, n) {
+            println!("old: {}, new: {}, diff: {}", p, n, n - p);
+
+            let interval = n - p;
+            let rest = (CYCLES - p - 1) % interval;
+            println!("interval: {}, rest: {}", interval, rest);
+            for _ in 0..rest {
+                for d in Direction::ALL {
+                    grid.tilt(d);
+                }
             }
+            println!("Part 2: {}", grid.load());
+            break;
         }
     }
-    println!("{:#?}", occ);
-    println!("Part 2: {}", grid.load());
 }
