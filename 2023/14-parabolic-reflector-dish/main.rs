@@ -75,7 +75,9 @@ impl Grid {
     fn tilt(&mut self, direction: Direction) {
         match direction {
             Direction::North => self.tilt_north(),
-            _ => todo!(),
+            Direction::West => self.tilt_west(),
+            Direction::South => self.tilt_south(),
+            Direction::East => self.tilt_east(),
         }
     }
 
@@ -90,6 +92,59 @@ impl Grid {
                         row += 1;
                     }
                     Tile::Fixed => row = j + 1,
+                    Tile::Empty => {}
+                }
+            }
+        }
+    }
+
+    fn tilt_south(&mut self) {
+        for i in 0..self.width {
+            let mut row = self.height;
+            for k in 0..self.height {
+                let j = self.height - 1 - k;
+                match self.data[j * self.width + i] {
+                    Tile::Slide => {
+                        self.data[j * self.width + i] = Tile::Empty;
+                        self.data[(row - 1) * self.width + i] = Tile::Slide;
+                        row -= 1;
+                    }
+                    Tile::Fixed => row = j,
+                    Tile::Empty => {}
+                }
+            }
+        }
+    }
+
+    fn tilt_west(&mut self) {
+        for j in 0..self.height {
+            let mut col = 0;
+            for i in 0..self.width {
+                match self.data[j * self.width + i] {
+                    Tile::Slide => {
+                        self.data[j * self.width + i] = Tile::Empty;
+                        self.data[j * self.width + col] = Tile::Slide;
+                        col += 1;
+                    }
+                    Tile::Fixed => col = i + 1,
+                    Tile::Empty => {}
+                }
+            }
+        }
+    }
+
+    fn tilt_east(&mut self) {
+        for j in 0..self.height {
+            let mut col = self.height;
+            for k in 0..self.width {
+                let i = self.height - 1 - k;
+                match self.data[j * self.width + i] {
+                    Tile::Slide => {
+                        self.data[j * self.width + i] = Tile::Empty;
+                        self.data[j * self.width + (col - 1)] = Tile::Slide;
+                        col -= 1;
+                    }
+                    Tile::Fixed => col = i,
                     Tile::Empty => {}
                 }
             }
@@ -123,7 +178,7 @@ fn main() {
     for _ in 0..1 {
         for d in Direction::ALL {
             grid.tilt(d);
-            println!("\nAfter {:#?}:\n{:#?}", d, grid)
+            println!("After {:#?}:\n{:#?}", d, grid)
         }
     }
 }
