@@ -15,6 +15,32 @@ struct Map {
 }
 
 impl Map {
+    fn energize_from(&self, point: Point, dir: Direction) -> usize {
+        let mut to_check = Vec::with_capacity(self.data.len());
+        to_check.push((point, dir));
+
+        let mut energized: HashSet<usize> = HashSet::with_capacity(self.data.len());
+        let mut seen: HashSet<String> = HashSet::with_capacity(4 * self.data.len());
+        let mut dir_buffer = Vec::with_capacity(2);
+
+        while let Some((point, dir)) = to_check.pop() {
+            let key = point.x + point.y * self.width;
+            energized.insert(key);
+            if !seen.insert(format!("{}-{:#?}", key, dir)) {
+                continue;
+            }
+
+            check_tile(self.data[key], dir, &mut dir_buffer);
+            for d in dir_buffer.iter() {
+                if let Some(next) = self.advance(&point, &d) {
+                    to_check.push((next, *d))
+                }
+            }
+        }
+
+        return energized.len();
+    }
+
     fn advance(&self, point: &Point, dir: &Direction) -> Option<Point> {
         match dir {
             Direction::South => {
@@ -160,27 +186,46 @@ fn main() {
             map.data.push(tile);
         }
     }
+    let part1 = map.energize_from(Point { x: 0, y: 0 }, Direction::East);
+    println!("Part 1: {}", part1);
 
-    let mut energized: HashSet<usize> = HashSet::with_capacity(map.data.len());
-    let mut seen: HashSet<String> = HashSet::with_capacity(4 * map.data.len());
-    let mut to_check = Vec::with_capacity(map.data.len());
-    let mut dir_buffer = Vec::with_capacity(2);
-    to_check.push((Point { x: 0, y: 0 }, Direction::East));
-
-    while let Some((point, dir)) = to_check.pop() {
-        let key = point.x + point.y * map.width;
-        energized.insert(key);
-        if !seen.insert(format!("{}-{:#?}", key, dir)) {
-            continue;
+    let mut max = 0;
+    for x in 0..map.width {
+        let e = map.energize_from(Point { x, y: 0 }, Direction::South);
+        if e > max {
+            max = e;
         }
-
-        check_tile(map.data[key], dir, &mut dir_buffer);
-        for d in dir_buffer.iter() {
-            if let Some(next) = map.advance(&point, &d) {
-                to_check.push((next, *d))
-            }
+    }
+    for x in 0..map.width {
+        let e = map.energize_from(
+            Point {
+                x,
+                y: map.height - 1,
+            },
+            Direction::North,
+        );
+        if e > max {
+            max = e;
+        }
+    }
+    for y in 0..map.height {
+        let e = map.energize_from(Point { x: 0, y }, Direction::East);
+        if e > max {
+            max = e;
+        }
+    }
+    for y in 0..map.height {
+        let e = map.energize_from(
+            Point {
+                x: map.width - 1,
+                y,
+            },
+            Direction::West,
+        );
+        if e > max {
+            max = e;
         }
     }
 
-    println!("Part 1: {}", energized.len());
+    println!("Part 2: {}", max);
 }
