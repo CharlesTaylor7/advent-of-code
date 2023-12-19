@@ -5,12 +5,36 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 #![allow(unreachable_code)]
-#![feature(ascii_char)]
+
+// heap
+struct PriorityQueue<T> {
+    data: Vec<(usize, T)>,
+}
+
+impl<T> PriorityQueue<T> {
+    pub fn insert(&mut self, key: usize, value: T) {
+        todo!()
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+        todo!()
+    }
+}
+struct Point {
+    pub x: usize,
+    pub y: usize,
+    pub z: usize,
+}
 
 struct Map {
     pub width: usize,
     pub height: usize,
     pub data: Vec<u8>,
+}
+impl Map {
+    pub fn dijkstra(&self) -> usize {
+        todo!()
+    }
 }
 
 fn main() {
@@ -26,5 +50,6 @@ fn main() {
             map.data.push(c.to_string().parse().unwrap());
         }
     }
-    println!("Part 1: {:#?}", map.data);
+
+    println!("Part 1: {}", map.dijkstra());
 }
