@@ -68,7 +68,7 @@ struct Point {
     pub y: usize,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 enum Direction {
     North,
     East,
@@ -138,7 +138,7 @@ fn check_tile(tile: Tile, dir: Direction, dirs: &mut Vec<Direction>) {
     }
 }
 fn main() {
-    let input = include_str!("example.txt");
+    let input = include_str!("input.txt");
 
     let mut map = Map {
         width: 0,
@@ -162,6 +162,7 @@ fn main() {
     }
 
     let mut energized: HashSet<usize> = HashSet::with_capacity(map.data.len());
+    let mut seen: HashSet<String> = HashSet::with_capacity(4 * map.data.len());
     let mut to_check = Vec::with_capacity(map.data.len());
     let mut dir_buffer = Vec::with_capacity(2);
     to_check.push((Point { x: 0, y: 0 }, Direction::East));
@@ -169,6 +170,9 @@ fn main() {
     while let Some((point, dir)) = to_check.pop() {
         let key = point.x + point.y * map.width;
         energized.insert(key);
+        if !seen.insert(format!("{}-{:#?}", key, dir)) {
+            continue;
+        }
 
         check_tile(map.data[key], dir, &mut dir_buffer);
         for d in dir_buffer.iter() {
