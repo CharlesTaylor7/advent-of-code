@@ -37,6 +37,9 @@ async function main(part: 1 | 2 = 1, testCase: string = "example.txt") {
   func(state as State);
 }
 
+// a poor man's dijkstra
+// using an array that I resort every cucle instead of a proper priority queue
+// functionally the same with worse algorithmic performance
 function part1(state: State) {
   const distances = Array.from(
     { length: state.grid.length },
