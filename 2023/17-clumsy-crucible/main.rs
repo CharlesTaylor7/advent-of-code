@@ -268,6 +268,8 @@ fn main() {
         data: Vec::with_capacity(input.len()),
     };
     for line in input.lines() {
+        map.width = line.len();
+        map.height += 1;
         for c in line.chars() {
             map.data.push(c.to_string().parse().unwrap());
         }
