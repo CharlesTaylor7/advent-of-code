@@ -8,11 +8,43 @@ use std::collections::HashMap;
 struct PriorityQueue<T> {
     data: Vec<(usize, T)>,
 }
+impl<T> std::fmt::Debug for PriorityQueue<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let mut start = 0;
+        let mut end = 1;
+        println!("heap:");
+        loop {
+            for i in start..end {
+                if let Some((p, _)) = self.data.get(i) {
+                    write!(f, " {}", p)?;
+                } else {
+                    return Ok(());
+                }
+            }
+            write!(f, "\n")?;
+
+            start = end + 1;
+            end = (end + 1) * 2;
+        }
+    }
+}
 
 impl<T> PriorityQueue<T> {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity(capacity),
+        }
+    }
+
+    fn check_invariants(&self) {
+        println!("{:#?}", self);
+        for (index, (priority, _)) in self.data.iter().enumerate() {
+            if index > 0 {
+                let parent = self.data[(index - 1) / 2].0;
+                if parent > *priority {
+                    panic!("heap property broken: {}", index);
+                }
+            }
         }
     }
 
@@ -28,6 +60,8 @@ impl<T> PriorityQueue<T> {
                 break;
             }
         }
+
+        self.check_invariants();
     }
 
     pub fn pop(&mut self) -> Option<(usize, T)> {
@@ -59,6 +93,8 @@ impl<T> PriorityQueue<T> {
                 break;
             }
         }
+
+        self.check_invariants();
 
         Some(min)
     }
