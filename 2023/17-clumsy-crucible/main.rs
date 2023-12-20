@@ -8,6 +8,7 @@
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::thread::panicking;
 
 // heap
 struct PriorityQueue<T> {
@@ -57,7 +58,12 @@ impl<T> PriorityQueue<T> {
             } else {
                 right_child
             };
-            self.data.swap(child, i);
+            if self.data[child].0 < self.data[i].0 {
+                self.data.swap(child, i);
+                i = child;
+            } else {
+                break;
+            }
         }
 
         Some(min)
@@ -225,6 +231,10 @@ impl Map {
         }
 
         while let Some((distance, point)) = queue.pop() {
+            println!(
+                "({},{},{},{:#?}): {}",
+                point.p.x, point.p.y, point.z, point.d, distance
+            );
             if point.p.x == self.width - 1 && point.p.y == self.height - 1 {
                 return distance;
             }
@@ -262,6 +272,7 @@ impl Map {
 fn main() {
     let input = include_str!("example.txt");
 
+    println!("{}", input);
     let mut map = Map {
         width: 0,
         height: 0,
@@ -274,6 +285,7 @@ fn main() {
             map.data.push(c.to_string().parse().unwrap());
         }
     }
+    println!("h: {}, w: {}", map.height, map.width);
 
     println!("Part 1: {}", map.dijkstra());
 }
