@@ -16,15 +16,24 @@ struct PriorityQueue<T> {
 
 impl<T> PriorityQueue<T> {
     pub fn with_capacity(capacity: usize) -> Self {
-        todo!()
+        Self {
+            data: Vec::with_capacity(capacity),
+        }
     }
 
     pub fn insert(&mut self, key: usize, value: T) {
+        self.data.push((key, value));
+        // trickle down
         todo!()
     }
 
     pub fn pop(&mut self) -> Option<(usize, T)> {
-        todo!()
+        let last = self.data.pop()?;
+        let min = std::mem::replace(&mut self.data[0], last);
+
+        // trickle up
+        todo!();
+        Some(min)
     }
 }
 
