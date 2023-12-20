@@ -1,14 +1,8 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(unreachable_code)]
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::thread::panicking;
 
 // heap
 struct PriorityQueue<T> {
@@ -106,9 +100,11 @@ struct Map {
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
 enum Direction {
+    #[allow(dead_code)]
     North = 0,
     East = 1,
     South = 2,
+    #[allow(dead_code)]
     West = 3,
 }
 impl Direction {
