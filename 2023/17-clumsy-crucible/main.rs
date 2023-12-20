@@ -188,8 +188,11 @@ impl Map {
             queue.insert(distance, point);
         }
 
-        let mut neighbors = Vec::with_capacity(3);
         while let Some((distance, point)) = queue.pop() {
+            if point.p.x == self.width - 1 && point.p.y == self.height - 1 {
+                return distance;
+            }
+
             // skip past remnants in the queue
             if distances
                 .get(&self.key_4d(&point))
@@ -197,10 +200,7 @@ impl Map {
             {
                 continue;
             }
-            neighbors.clear();
-            neighbors.push(self.forward(&point));
-            neighbors.push(self.right(&point));
-            neighbors.push(self.left(&point));
+            let neighbors = [self.forward(&point), self.right(&point), self.left(&point)];
 
             for n in neighbors.into_iter().flatten() {
                 let d = distance + self.data[self.key_2d(&point.p)] as usize;
@@ -218,9 +218,8 @@ impl Map {
                     }
                 }
             }
-            todo!()
         }
-        todo!()
+        panic!();
     }
 }
 
