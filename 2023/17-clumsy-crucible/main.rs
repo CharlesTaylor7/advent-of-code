@@ -23,16 +23,43 @@ impl<T> PriorityQueue<T> {
 
     pub fn insert(&mut self, key: usize, value: T) {
         self.data.push((key, value));
-        // trickle down
-        todo!()
+        let mut i = self.data.len() - 1;
+        while i > 0 {
+            let parent = (i - 1) / 2;
+            if self.data[parent].0 > self.data[i].0 {
+                self.data.swap(parent, i);
+                i = parent;
+            } else {
+                break;
+            }
+        }
     }
 
     pub fn pop(&mut self) -> Option<(usize, T)> {
-        let last = self.data.pop()?;
-        let min = std::mem::replace(&mut self.data[0], last);
+        if self.data.len() == 0 {
+            return None;
+        }
 
-        // trickle up
-        todo!();
+        let min = self.data.swap_remove(0);
+        let mut i = 0;
+
+        loop {
+            let left_child = 2 * i + 1;
+            let right_child = 2 * i + 2;
+
+            if left_child >= self.data.len() {
+                break;
+            }
+            let child = if right_child >= self.data.len()
+                || self.data[left_child].0 < self.data[right_child].0
+            {
+                left_child
+            } else {
+                right_child
+            };
+            self.data.swap(child, i);
+        }
+
         Some(min)
     }
 }
