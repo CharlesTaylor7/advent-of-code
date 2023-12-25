@@ -1,6 +1,5 @@
 #!/usr/bin/env cargo +nightly -Zscript
 
-
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -261,33 +260,39 @@ impl Map {
             }
         }
 
-        while let Some((mut distance, node)) = queue.pop() {
+        while let Some((dist, node)) = queue.pop() {
             if node.p.x == self.width - 1 && node.p.y == self.height - 1 {
-                return distance;
+                return dist;
             }
 
             // skip past remnants in the queue
             if distances
                 .get(&self.node_key(&node))
-                .is_some_and(|d| *d < distance)
+                .is_some_and(|d| *d < dist)
             {
                 println!("skipping already processed point");
                 continue;
             }
 
             for dir in node.a.opposite().dirs() {
-                let mut p = node.p.clone();
-                for _ in 1..=max_leap {
-                    if let Some(point) = self.advance(&p, *dir) {
+                let mut point = node.p.clone();
+                let mut distance = dist;
+                for leap in 1..=max_leap {
+                    if let Some(next) = self.advance(&point, *dir) {
                         let node = Node {
-                            p: point.clone(),
+                            p: next.clone(),
                             a: dir.axis(),
                         };
                         distance += self.data[self.key_2d(&node.p)] as usize;
-                        p = point;
+                        point = next;
 
+                        println!("{dir:#?} leap {leap} to neighbor: {node:#?} cost: {distance}",);
                         match distances.entry(self.node_key(&node)) {
                             Entry::Occupied(mut entry) => {
+                                println!(
+                                    "node exists already with a travel cost of {}",
+                                    *entry.get()
+                                );
                                 if distance < *entry.get() {
                                     entry.insert(distance);
                                     queue.insert(distance, node)
@@ -310,7 +315,7 @@ impl Map {
 }
 
 fn main() {
-    let input = include_str!("example.txt");
+    let input = include_str!("input.txt");
 
     println!("{}", input);
     let mut map = Map {
