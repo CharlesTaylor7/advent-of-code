@@ -43,7 +43,6 @@ impl<T: Debug> PriorityQueue<T> {
     }
 
     fn check_invariants(&self) {
-        println!("{:#?}", self);
         for (index, (priority, _)) in self.data.iter().enumerate() {
             if index > 0 {
                 let parent = self.data[(index - 1) / 2].0;
@@ -280,14 +279,13 @@ impl Map {
                 let mut p = node.p.clone();
                 for _ in 1..=max_leap {
                     if let Some(point) = self.advance(&p, *dir) {
-                        distance += self.data[self.key_2d(&point)] as usize;
                         let node = Node {
                             p: point.clone(),
                             a: dir.axis(),
                         };
+                        distance += self.data[self.key_2d(&node.p)] as usize;
                         p = point;
 
-                        distance += self.data[self.key_2d(&node.p)] as usize;
                         match distances.entry(self.node_key(&node)) {
                             Entry::Occupied(mut entry) => {
                                 if distance < *entry.get() {
