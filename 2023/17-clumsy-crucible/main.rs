@@ -3,11 +3,13 @@
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 // heap
 struct PriorityQueue<T> {
     data: Vec<(usize, T)>,
 }
+
 impl<T> std::fmt::Debug for PriorityQueue<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut start = 0;
@@ -23,13 +25,13 @@ impl<T> std::fmt::Debug for PriorityQueue<T> {
             }
             write!(f, "\n")?;
 
-            start = end + 1;
-            end = (end + 1) * 2;
+            start = end;
+            end = (end * 2) + 1;
         }
     }
 }
 
-impl<T> PriorityQueue<T> {
+impl<T: Debug> PriorityQueue<T> {
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity(capacity),
@@ -37,11 +39,11 @@ impl<T> PriorityQueue<T> {
     }
 
     fn check_invariants(&self) {
-        println!("{:#?}", self);
         for (index, (priority, _)) in self.data.iter().enumerate() {
             if index > 0 {
                 let parent = self.data[(index - 1) / 2].0;
                 if parent > *priority {
+                    println!("{:#?}", self.data);
                     panic!("heap property broken: {}", index);
                 }
             }
@@ -49,6 +51,7 @@ impl<T> PriorityQueue<T> {
     }
 
     pub fn insert(&mut self, key: usize, value: T) {
+        println!("insert: {key}, {value:#?}");
         self.data.push((key, value));
         let mut i = self.data.len() - 1;
         while i > 0 {
@@ -60,7 +63,6 @@ impl<T> PriorityQueue<T> {
                 break;
             }
         }
-
         self.check_invariants();
     }
 
@@ -94,8 +96,8 @@ impl<T> PriorityQueue<T> {
             }
         }
 
+        println!("pop: {min:#?}");
         self.check_invariants();
-
         Some(min)
     }
 }
@@ -104,6 +106,12 @@ struct Point4d {
     pub p: Point2d,
     pub z: u8,
     pub d: Direction,
+}
+
+impl std::fmt::Debug for Point4d {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "({},{},{},{:#?})", self.p.x, self.p.y, self.z, self.d)
+    }
 }
 
 impl Point4d {
@@ -134,7 +142,7 @@ struct Map {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Direction {
     #[allow(dead_code)]
     North = 0,
@@ -146,12 +154,12 @@ enum Direction {
 impl Direction {
     pub fn right(&self) -> Direction {
         let n = *self as u8;
-        unsafe { std::mem::transmute(n + 1 % 4) }
+        unsafe { std::mem::transmute((n + 1) % 4) }
     }
 
     pub fn left(&self) -> Direction {
-        let n = *self as u8;
-        unsafe { std::mem::transmute(n + 5 % 4) }
+        let n = (*self) as u8;
+        unsafe { std::mem::transmute((n + 3) % 4) }
     }
 }
 
@@ -263,10 +271,6 @@ impl Map {
         }
 
         while let Some((distance, point)) = queue.pop() {
-            println!(
-                "({},{},{},{:#?}): {}",
-                point.p.x, point.p.y, point.z, point.d, distance
-            );
             if point.p.x == self.width - 1 && point.p.y == self.height - 1 {
                 return distance;
             }
@@ -276,6 +280,7 @@ impl Map {
                 .get(&self.key_4d(&point))
                 .is_some_and(|d| *d < distance)
             {
+                println!("skipping already processed point");
                 continue;
             }
             let neighbors = [self.forward(&point), self.right(&point), self.left(&point)];
@@ -297,7 +302,7 @@ impl Map {
                 }
             }
         }
-        panic!();
+        panic!("No path to the end");
     }
 }
 
@@ -320,4 +325,17 @@ fn main() {
     println!("h: {}, w: {}", map.height, map.width);
 
     println!("Part 1: {}", map.dijkstra());
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    pub fn test_turning() {
+        assert_eq!(Direction::South.right(), Direction::West);
+        assert_eq!(Direction::South.left(), Direction::East);
+        assert_eq!(Direction::West.left(), Direction::South);
+        assert_eq!(Direction::West.right(), Direction::North);
+    }
 }
