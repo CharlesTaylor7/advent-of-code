@@ -233,7 +233,7 @@ impl Map {
         self.key_2d(&node.p) + node.a as usize * self.width * self.height
     }
 
-    pub fn dijkstra(&self, max_leap: usize) -> usize {
+    pub fn dijkstra(&self, min_leap: usize, max_leap: usize) -> usize {
         let capacity = self.width * self.height * 2;
         let mut queue = PriorityQueue::with_capacity(capacity);
 
@@ -243,15 +243,18 @@ impl Map {
         let dirs = [Direction::South, Direction::East];
         for dir in dirs {
             let mut distance = 0;
-            let mut p = initial.clone();
-            for _ in 1..=max_leap {
-                if let Some(point) = self.advance(&p, dir) {
-                    distance += self.data[self.key_2d(&point)] as usize;
+            let mut point = initial.clone();
+            for leap in 1..=max_leap {
+                if let Some(next) = self.advance(&point, dir) {
                     let node = Node {
-                        p: point.clone(),
+                        p: next.clone(),
                         a: dir.axis(),
                     };
-                    p = point;
+                    distance += self.data[self.key_2d(&node.p)] as usize;
+                    point = next;
+                    if leap < min_leap {
+                        continue;
+                    }
                     distances.insert(self.node_key(&node), distance);
                     queue.insert(distance, node);
                 } else {
@@ -285,6 +288,10 @@ impl Map {
                         };
                         distance += self.data[self.key_2d(&node.p)] as usize;
                         point = next;
+
+                        if leap < min_leap {
+                            continue;
+                        }
 
                         println!("{dir:#?} leap {leap} to neighbor: {node:#?} cost: {distance}",);
                         match distances.entry(self.node_key(&node)) {
@@ -332,5 +339,6 @@ fn main() {
     }
     println!("h: {}, w: {}", map.height, map.width);
 
-    println!("Part 1: {}", map.dijkstra(3));
+    println!("Part 1: {}", map.dijkstra(1, 3));
+    println!("Part 2: {}", map.dijkstra(4, 10));
 }
