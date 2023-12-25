@@ -5,6 +5,10 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+// todo:
+// re encode neighbors as a leap of 1 to 3 elments
+// encode directions as vertical vs horizontal in the p queue
+
 // heap
 struct PriorityQueue<T> {
     data: Vec<(usize, T)>,
@@ -39,6 +43,7 @@ impl<T: Debug> PriorityQueue<T> {
     }
 
     fn check_invariants(&self) {
+        println!("{:#?}", self);
         for (index, (priority, _)) in self.data.iter().enumerate() {
             if index > 0 {
                 let parent = self.data[(index - 1) / 2].0;
@@ -102,28 +107,18 @@ impl<T: Debug> PriorityQueue<T> {
     }
 }
 
-struct Point4d {
+struct Node {
     pub p: Point2d,
-    pub z: u8,
-    pub d: Direction,
+    pub a: Axis,
 }
 
-impl std::fmt::Debug for Point4d {
+impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "({},{},{},{:#?})", self.p.x, self.p.y, self.z, self.d)
+        write!(f, "({},{},{:#?})", self.p.x, self.p.y, self.a)
     }
 }
 
-impl Point4d {
-    pub fn new(x: usize, y: usize, z: u8, d: Direction) -> Self {
-        Self {
-            p: Point2d::new(x, y),
-            z,
-            d,
-        }
-    }
-}
-
+#[derive(Clone)]
 struct Point2d {
     pub x: usize,
     pub y: usize,
@@ -133,12 +128,6 @@ impl Point2d {
     pub fn new(x: usize, y: usize) -> Self {
         Self { x, y }
     }
-}
-
-struct Map {
-    pub width: usize,
-    pub height: usize,
-    pub data: Vec<u8>,
 }
 
 #[repr(u8)]
@@ -152,22 +141,44 @@ enum Direction {
     West = 3,
 }
 impl Direction {
-    pub fn right(&self) -> Direction {
-        let n = *self as u8;
-        unsafe { std::mem::transmute((n + 1) % 4) }
-    }
-
-    pub fn left(&self) -> Direction {
+    pub fn axis(&self) -> Axis {
         let n = (*self) as u8;
-        unsafe { std::mem::transmute((n + 3) % 4) }
+        unsafe { std::mem::transmute(n % 2) }
     }
 }
 
-impl Map {
-    // every step forward increases depth up to this cap
-    // every step left or right resets depth
-    const DEPTH: u8 = 3;
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Axis {
+    Vertical = 0,
+    Horizontal = 1,
+}
+impl Axis {
+    const DIRS_HORIZONTAL: [Direction; 2] = [Direction::East, Direction::West];
+    const DIRS_VERTICAL: [Direction; 2] = [Direction::North, Direction::South];
 
+    pub fn dirs(&self) -> &[Direction] {
+        match self {
+            Axis::Vertical => &Axis::DIRS_VERTICAL,
+            Axis::Horizontal => &Axis::DIRS_HORIZONTAL,
+        }
+    }
+
+    pub fn opposite(&self) -> Axis {
+        match self {
+            Axis::Vertical => Axis::Horizontal,
+            Axis::Horizontal => Axis::Vertical,
+        }
+    }
+}
+
+struct Map {
+    pub width: usize,
+    pub height: usize,
+    pub data: Vec<u8>,
+}
+
+impl Map {
     fn advance(&self, point: &Point2d, d: Direction) -> Option<Point2d> {
         match d {
             Direction::North => {
@@ -216,88 +227,82 @@ impl Map {
         }
     }
 
-    fn forward(&self, point: &Point4d) -> Option<Point4d> {
-        if point.z + 1 == Self::DEPTH {
-            return None;
-        }
-
-        let p = self.advance(&point.p, point.d)?;
-
-        Some(Point4d {
-            p,
-            z: point.z + 1,
-            d: point.d,
-        })
-    }
-
-    fn right(&self, point: &Point4d) -> Option<Point4d> {
-        let d = point.d.right();
-        let p = self.advance(&point.p, point.d)?;
-
-        Some(Point4d { p, z: 0, d })
-    }
-
-    fn left(&self, point: &Point4d) -> Option<Point4d> {
-        let d = point.d.left();
-        let p = self.advance(&point.p, point.d)?;
-
-        Some(Point4d { p, z: 0, d })
-    }
-
     fn key_2d(&self, point: &Point2d) -> usize {
         point.x + point.y * self.width
     }
 
-    fn key_4d(&self, point: &Point4d) -> usize {
-        self.key_2d(&point.p)
-            + point.z as usize * self.width * self.height
-            + point.d as usize * self.width * self.height * Self::DEPTH as usize
+    fn node_key(&self, node: &Node) -> usize {
+        self.key_2d(&node.p) + node.a as usize * self.width * self.height
     }
 
-    pub fn dijkstra(&self) -> usize {
-        let capacity = self.width * self.height * 3 * 4;
+    pub fn dijkstra(&self, max_leap: usize) -> usize {
+        let capacity = self.width * self.height * 2;
         let mut queue = PriorityQueue::with_capacity(capacity);
 
         let mut distances = HashMap::<usize, usize>::with_capacity(capacity);
 
-        let initial = [
-            Point4d::new(0, 1, 0, Direction::South),
-            Point4d::new(1, 0, 0, Direction::East),
-        ];
-        for point in initial {
-            let distance = self.data[self.key_2d(&point.p)] as usize;
-            distances.insert(self.key_4d(&point), distance);
-            queue.insert(distance, point);
+        let initial = Point2d::new(0, 0);
+        let dirs = [Direction::South, Direction::East];
+        for dir in dirs {
+            let mut distance = 0;
+            let mut p = initial.clone();
+            for _ in 1..=max_leap {
+                if let Some(point) = self.advance(&p, dir) {
+                    distance += self.data[self.key_2d(&point)] as usize;
+                    let node = Node {
+                        p: point.clone(),
+                        a: dir.axis(),
+                    };
+                    p = point;
+                    distances.insert(self.node_key(&node), distance);
+                    queue.insert(distance, node);
+                } else {
+                    break;
+                }
+            }
         }
 
-        while let Some((distance, point)) = queue.pop() {
-            if point.p.x == self.width - 1 && point.p.y == self.height - 1 {
+        while let Some((mut distance, node)) = queue.pop() {
+            if node.p.x == self.width - 1 && node.p.y == self.height - 1 {
                 return distance;
             }
 
             // skip past remnants in the queue
             if distances
-                .get(&self.key_4d(&point))
+                .get(&self.node_key(&node))
                 .is_some_and(|d| *d < distance)
             {
                 println!("skipping already processed point");
                 continue;
             }
-            let neighbors = [self.forward(&point), self.right(&point), self.left(&point)];
 
-            for n in neighbors.into_iter().flatten() {
-                let d = distance + self.data[self.key_2d(&point.p)] as usize;
-                match distances.entry(self.key_4d(&n)) {
-                    Entry::Occupied(mut entry) => {
-                        if d < *entry.get() {
-                            entry.insert(d);
-                            queue.insert(d, n)
+            for dir in node.a.opposite().dirs() {
+                let mut p = node.p.clone();
+                for _ in 1..=max_leap {
+                    if let Some(point) = self.advance(&p, *dir) {
+                        distance += self.data[self.key_2d(&point)] as usize;
+                        let node = Node {
+                            p: point.clone(),
+                            a: dir.axis(),
+                        };
+                        p = point;
+
+                        distance += self.data[self.key_2d(&node.p)] as usize;
+                        match distances.entry(self.node_key(&node)) {
+                            Entry::Occupied(mut entry) => {
+                                if distance < *entry.get() {
+                                    entry.insert(distance);
+                                    queue.insert(distance, node)
+                                }
+                            }
+
+                            Entry::Vacant(entry) => {
+                                entry.insert(distance);
+                                queue.insert(distance, node);
+                            }
                         }
-                    }
-
-                    Entry::Vacant(entry) => {
-                        entry.insert(d);
-                        queue.insert(d, n);
+                    } else {
+                        break;
                     }
                 }
             }
@@ -324,18 +329,5 @@ fn main() {
     }
     println!("h: {}, w: {}", map.height, map.width);
 
-    println!("Part 1: {}", map.dijkstra());
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::*;
-
-    #[test]
-    pub fn test_turning() {
-        assert_eq!(Direction::South.right(), Direction::West);
-        assert_eq!(Direction::South.left(), Direction::East);
-        assert_eq!(Direction::West.left(), Direction::South);
-        assert_eq!(Direction::West.right(), Direction::North);
-    }
+    println!("Part 1: {}", map.dijkstra(3));
 }
