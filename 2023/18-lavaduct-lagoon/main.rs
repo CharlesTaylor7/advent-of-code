@@ -21,9 +21,6 @@ struct Point {
 }
 
 impl Point {
-    pub fn cross_product(&self, other: &Point) -> isize {
-        self.x * self.y - other.x * self.y
-    }
     pub fn advance(&mut self, dir: Direction, amount: isize) {
         match dir {
             Direction::Left => {
@@ -58,7 +55,6 @@ fn main() {
     let mut area = 0;
     let mut vertices = Vec::new();
     let mut current = Point { x: 0, y: 0 };
-    let mut prev;
     let mut bounds = Bounds {
         min: current.clone(),
         max: current.clone(),
@@ -76,9 +72,8 @@ fn main() {
         let amount: isize = parts[1].parse().unwrap();
 
         perimeter += amount;
-        prev = current.clone();
-        current.advance(dir, amount + 1);
-        area += prev.cross_product(&current);
+        current.advance(dir, amount);
+        vertices.push(current.clone());
         match dir {
             Direction::Down => {
                 bounds.max.y = std::cmp::max(bounds.max.y, current.y);
@@ -96,7 +91,6 @@ fn main() {
                 bounds.min.x = std::cmp::min(bounds.min.x, current.x);
             }
         };
-        vertices.push(current.clone());
     }
     println!("Perimeter: {}", perimeter);
     println!("Bounds: {:#?}", bounds);
