@@ -85,9 +85,20 @@ struct Bounds {
 type Result<T> = std::result::Result<T, Cow<'static, str>>;
 
 fn line_to_motion(line: &str) -> Result<Motion> {
-    let parts: Vec<_> = line.split(['#', ')']).collect();
-    dbg!("{}", parts);
-    Err("".into())
+    let part = line.split(['#', ')']).nth(1).ok_or("line is missing hex code")?;
+    let dir = part.chars().nth(5).ok_or("missing 5th hex character")?;
+    let dir = match dir {
+        '0' => Direction::Right,
+        '1' => Direction::Right,
+        '2' => Direction::Right,
+        '3' => Direction::Right,
+        _ => Err("direction is out of bounds")?
+    };
+
+    let hex: String = part.chars().take(5).collect();
+    let amount = isize::from_str_radix(&hex, 16).map_err(|e| e.to_string())?;
+    Ok(Motion { amount, dir })
+
     /*
     let dir = match parts[0] {
         "R" => Direction::Right,
@@ -105,7 +116,7 @@ fn line_to_motion(line: &str) -> Result<Motion> {
 // we need to detect if the loop is being formed in a counter clockwise or clockwise direction.
 // then we can use a simple bfs on the interior of the loop to calculate the carved out area.
 fn main() -> Result<()> {
-    let input = include_str!("input.txt");
+    let input = include_str!("example.txt");
 
     let mut orientation = Orientation::Clockwise;
 
