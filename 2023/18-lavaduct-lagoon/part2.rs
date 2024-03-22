@@ -1,6 +1,13 @@
 #!/usr/bin/env cargo +nightly -Zscript 
+//! ```cargo
+//! [dependencies]
+//! anyhow = "*"
+//! ```
+//!
 use std::collections::HashSet;
-use std::{borrow::Cow, num::ParseIntError}; 
+use std::fs;
+use std::io::{Write,BufWriter};
+use anyhow::{bail, anyhow, Result};
 
 // PArt 2 is rough...
 // The hexadecimal parsing is no big deal
@@ -82,45 +89,46 @@ struct Bounds {
     pub max: Point,
 }
 
-type Result<T> = std::result::Result<T, Cow<'static, str>>;
-
-fn line_to_motion(line: &str) -> Result<Motion> {
-    let part = line.split(['#', ')']).nth(1).ok_or("line is missing hex code")?;
-    let dir = part.chars().nth(5).ok_or("missing 5th hex character")?;
-    let dir = match dir {
-        '0' => Direction::Right,
-        '1' => Direction::Right,
-        '2' => Direction::Right,
-        '3' => Direction::Right,
-        _ => Err("direction is out of bounds")?
-    };
-
-    let hex: String = part.chars().take(5).collect();
-    let amount = isize::from_str_radix(&hex, 16).map_err(|e| e.to_string())?;
-    Ok(Motion { amount, dir })
-
-    /*
+fn line_to_motion_part_1(line: &str) -> Result<Motion> {
+    let parts: Vec<_> = line.split(" ").collect();
     let dir = match parts[0] {
         "R" => Direction::Right,
         "L" => Direction::Left,
         "U" => Direction::Up,
         "D" => Direction::Down,
-        dir => Err(Cow::Owned(format!("Invalid direction: {}", dir)))?
+        dir => bail!("Invalid direction: {}", dir)
     };
-    let amount: isize = parts[1].parse().map_err(|e: ParseIntError| e.to_string())?;
+    let amount: isize = parts[1].parse()?;
 
     Ok(Motion { amount, dir })
-    */
+}
+
+
+
+fn line_to_motion(line: &str) -> Result<Motion> {
+    let part = line.split(['#', ')']).nth(1).ok_or(anyhow!("line is missing hex code"))?;
+    let dir = part.chars().nth(5).ok_or(anyhow!("missing 5th hex character"))?;
+    let dir = match dir {
+        '0' => Direction::Right,
+        '1' => Direction::Right,
+        '2' => Direction::Right,
+        '3' => Direction::Right,
+        _ => bail!("direction is out of bounds")
+    };
+
+    let hex: String = part.chars().take(5).collect();
+    let amount = isize::from_str_radix(&hex, 16)?;
+    Ok(Motion { amount, dir })
 }
 
 // we need to detect if the loop is being formed in a counter clockwise or clockwise direction.
 // then we can use a simple bfs on the interior of the loop to calculate the carved out area.
 fn main() -> Result<()> {
-    let input = include_str!("example.txt");
+    let input = include_str!("input.txt");
 
     let mut orientation = Orientation::Clockwise;
 
-    let motions = input.lines().map(|line| line_to_motion(line) ).collect::<Result<Vec<_>>>()?;
+    let motions = input.lines().map(|line| line_to_motion_part_1(line)).collect::<Result<Vec<_>>>()?;
 
     let mut current = Point { x: 0, y: 0 };
     let bounds = Bounds {
@@ -130,24 +138,16 @@ fn main() -> Result<()> {
 
 
     let mut bounds = Bounds { min: Point { x: 0, y: 0 }, max: Point { x: 0, y: 0 }};
-    // we need to detect the last direction of the intersection trench path with the positive x axis.
-    let mut orientation = Orientation::Clockwise;
-    let mut visited = HashSet::new();
-    let mut prev_y = 0_isize;
+    let mut trench = HashSet::new();
+    let mut vertices = HashSet::new();
     for motion in motions.iter() {
         for _ in 0..motion.amount {
-            // advance 1 square at a time and save them all into the visited set
-            current.advance(&Motion{dir: motion.dir, amount: 1});
-            visited.insert(current.clone());
-        }
-        let sign = isize::signum(current.y);
-        if sign != prev_y {
-            orientation = if sign > 0 { Orientation::AntiClockwise } else { Orientation::Clockwise };
-        }
-        if sign != 0 {
-            prev_y = sign;
+            current.advance(&Motion { amount: 1, dir: motion.dir});
+            trench.insert(current.clone());
         }
 
+        vertices.insert(dbg!(current.clone()));
+       
         match motion.dir {
             Direction::Down => {
                 bounds.max.y = std::cmp::max(bounds.max.y, current.y);
@@ -167,40 +167,34 @@ fn main() -> Result<()> {
         };
     }
 
-    let mut point = Point { x: 0, y: 0 };
-    let mut to_visit = Vec::with_capacity(100);
-    for motion in motions.iter() {
-        let mut copy = point.clone();
+    // dump to ppm
+    let mut file = BufWriter::new(fs::OpenOptions::new()
+            .truncate(true)
+            .write(true)
+            .create(true)
+            .open("trench.ppm")?);
 
-        // advance once along the path
-        // advance once inward
-        copy.advance(&Motion { amount: 1, dir: motion.dir });
-        copy.advance(&Motion { amount: 1, dir: motion.dir.inward(&orientation) });
-        to_visit.push(copy);
+    write!(&mut file, "P6 {} {} 255\n", bounds.max.x - bounds.min.x + 1, bounds.max.y - bounds.min.y + 1)?;
+    for y in bounds.min.y..=bounds.max.y {
+        for x in bounds.min.x..=bounds.max.x {
+            let point= &Point { x, y};
 
-        point.advance(&motion);
-    }
-
-    dbg!("loop: {:?}", &visited);
-    while let Some(point) = to_visit.pop() {
-        dbg!("To Visit: {:?}", &point);
-        if visited.contains(&point) {
-            continue;
+            if vertices.contains(&point) {
+                // red
+                file.write_all(&[255, 0, 0]).unwrap();
+            }
+            else if trench.contains(&point) {
+                // black
+                file.write_all(&[0, 0, 0]).unwrap();
+            }
+            else {
+                // white
+                file.write_all(&[255, 255, 255]).unwrap();
+            }
         }
-        visited.insert(point.clone());
-
-        let mut current = point;
-        for d in Direction::ALL {
-            current.advance(&Motion { dir: d, amount: 1});
-            to_visit.push(current.clone());
-            current.advance(&Motion { dir: d, amount: -1});
-        }
+        //file.write(b"\n");
     }
+    file.flush().unwrap();
 
-    dbg!("interior: {:?}", visited.len());
-    // we have deduced orientation, so we need to a second pass around the trench to seed the bfs
-    // with points adjacent to the trench and perpendicular to the path.
-
-    dbg!("Bounds: {:#?}", bounds);
     Ok(())
 }
