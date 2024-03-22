@@ -80,7 +80,6 @@ type Result<T> = std::result::Result<T, Cow<'static, str>>;
 
 fn line_to_motion(line: &str) -> Result<Motion> {
     let parts: Vec<_> = line.split(" ").collect();
-    dbg!("{}", line);
     let dir = match parts[0] {
         "R" => Direction::Right,
         "L" => Direction::Left,
@@ -96,20 +95,15 @@ fn line_to_motion(line: &str) -> Result<Motion> {
 // we need to detect if the loop is being formed in a counter clockwise or clockwise direction.
 // then we can use a simple bfs on the interior of the loop to calculate the carved out area.
 fn main() -> Result<()> {
-    let input = include_str!("input.txt");
+    let input = include_str!("example.txt");
 
     let mut orientation = Orientation::Clockwise;
 
     let motions = input.lines().map(|line| line_to_motion(line) ).collect::<Result<Vec<_>>>()?;
 
     let mut current = Point { x: 0, y: 0 };
-    let bounds = Bounds {
-        min: current.clone(),
-        max: current.clone(),
-    };
 
 
-    let mut bounds = Bounds { min: Point { x: 0, y: 0 }, max: Point { x: 0, y: 0 }};
     // we need to detect the last direction of the intersection trench path with the positive x axis.
     let mut orientation = Orientation::Clockwise;
     let mut visited = HashSet::new();
@@ -127,24 +121,6 @@ fn main() -> Result<()> {
         if sign != 0 {
             prev_y = sign;
         }
-
-        match motion.dir {
-            Direction::Down => {
-                bounds.max.y = std::cmp::max(bounds.max.y, current.y);
-            }
-
-            Direction::Up => {
-                bounds.min.y = std::cmp::min(bounds.min.y, current.y);
-            }
-
-            Direction::Right => {
-                bounds.max.x = std::cmp::max(bounds.max.x, current.x);
-            }
-
-            Direction::Left => {
-                bounds.min.x = std::cmp::min(bounds.min.x, current.x);
-            }
-        };
     }
 
     let mut point = Point { x: 0, y: 0 };
@@ -161,9 +137,10 @@ fn main() -> Result<()> {
         point.advance(&motion);
     }
 
-    dbg!("loop: {:?}", &visited);
+
+    // we have deduced orientation, so we need to a second pass around the trench to seed the bfs
+    // with points adjacent to the trench and perpendicular to the path.
     while let Some(point) = to_visit.pop() {
-        dbg!("To Visit: {:?}", &point);
         if visited.contains(&point) {
             continue;
         }
@@ -177,10 +154,7 @@ fn main() -> Result<()> {
         }
     }
 
-    dbg!("interior: {:?}", visited.len());
-    // we have deduced orientation, so we need to a second pass around the trench to seed the bfs
-    // with points adjacent to the trench and perpendicular to the path.
+    println!("answer: {:?}", visited.len());
 
-    dbg!("Bounds: {:#?}", bounds);
     Ok(())
 }
