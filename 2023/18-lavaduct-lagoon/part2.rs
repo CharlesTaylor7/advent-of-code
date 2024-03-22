@@ -2,6 +2,12 @@
 use std::collections::HashSet;
 use std::{borrow::Cow, num::ParseIntError}; 
 
+// PArt 2 is rough...
+// The hexadecimal parsing is no big deal
+// but the numbers are now much larger. My code won't scale properly now..
+// But just for fun let's convert the code to handle hex and see where my code breaks.
+//
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Direction {
     Up,
@@ -79,8 +85,10 @@ struct Bounds {
 type Result<T> = std::result::Result<T, Cow<'static, str>>;
 
 fn line_to_motion(line: &str) -> Result<Motion> {
-    let parts: Vec<_> = line.split(" ").collect();
-    dbg!("{}", line);
+    let parts: Vec<_> = line.split(['#', ')']).collect();
+    dbg!("{}", parts);
+    Err("".into())
+    /*
     let dir = match parts[0] {
         "R" => Direction::Right,
         "L" => Direction::Left,
@@ -91,6 +99,7 @@ fn line_to_motion(line: &str) -> Result<Motion> {
     let amount: isize = parts[1].parse().map_err(|e: ParseIntError| e.to_string())?;
 
     Ok(Motion { amount, dir })
+    */
 }
 
 // we need to detect if the loop is being formed in a counter clockwise or clockwise direction.
