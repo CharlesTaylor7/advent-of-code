@@ -65,17 +65,13 @@ pub struct Pipeline {
 impl Pipeline {
     pub fn accepts(&self, part: &Part) -> bool {
         let mut id = self.initial.clone();
-        'machine: loop {
-            for step in self.workflows[&id].steps.iter() {
-                if step.matches(part) {
-                    match &step.target {
-                        Target::Accept => return true,
-                        Target::Reject => return false,
-                        Target::Workflow(new_id) => {
-                            id = new_id.clone();
-                            continue 'machine;
-                        }
-                    }
+        loop {
+            match self.workflows[&id].run(part) {
+                Target::Accept => return true,
+                Target::Reject => return false,
+                Target::Workflow(new_id) => {
+                    id = new_id.clone();
+                    continue;
                 }
             }
         }
@@ -85,6 +81,17 @@ impl Pipeline {
 pub struct Workflow {
     pub steps: Vec<Instruction>,
     pub last: Target,
+}
+
+impl Workflow {
+    pub fn run<'a>(&'a self, part: &Part) -> &'a Target {
+     for step in self.steps.iter() {
+        if step.matches(part) {
+            return &step.target;
+        }
+     }
+     &self.last
+    } 
 }
 
 pub enum Target {
