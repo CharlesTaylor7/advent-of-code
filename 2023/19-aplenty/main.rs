@@ -48,7 +48,7 @@ impl Input {
 
 // The platonic ideal of a part.
 // It doesn't have any concrete values, just ranges of possible values;
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PlatonicPart {
     pub x: Range,
     pub m: Range,
@@ -115,7 +115,7 @@ impl PlatonicPart {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Range {
     pub min: usize,
     pub max: usize,
