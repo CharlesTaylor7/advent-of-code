@@ -244,34 +244,39 @@ fn dump_ppm(motions: &[Motion], bounds: &Bounds) -> Result<()> {
     Ok(())
 }
 
-
-fn get_vertices(motions: &[Motion], orientation: Orientation) -> Vec<Point> {
-    let mut current = Point { x: 0, y: 0 };
+fn get_vertices(motions: &[Motion], _orientation: Orientation) -> Vec<Point> {
     let n = motions.len();
     let mut vertices = Vec::<Point>::with_capacity(n);
 
+    let mut current = Point { x: 0, y: 0 };
+    // The corner is a small adjustment to trace around the outside of the trenches perimeter. 
+    // We shift up to 1 square down or to the right.
+    let mut corner = Point { x: 0, y: 0 };
+     
+    match motions.last().expect("non empty list").dir {
+        Direction::Right => { corner.y = 0; },
+        Direction::Left => { corner.y = 1; },
+
+        Direction::Up => { corner.x = 0; },
+        Direction::Down => { corner.x = 1; },
+    }
+
+
     for i in 0..n {
         let motion = &motions[i];
-        let next_motion = &motions[(i + 1) % n];
-        current.advance(&motion);
-        
-        let adjustment = match (motion.dir, next_motion.dir) {
-            (Direction::Right, Direction::Down) => Point { x: 1, y: 0 },
-            (Direction::Down, Direction::Right) => Point { x: 1, y: 0 },
+        match motion.dir {
+            Direction::Right => { corner.y = 0; },
+            Direction::Left => { corner.y = 1; },
 
-            (Direction::Left, Direction::Up) => Point { x: 0, y: 1 },
-            (Direction::Up, Direction::Left) => Point { x: 0, y: 1 },
+            Direction::Up => { corner.x = 0; },
+            Direction::Down => { corner.x = 1; },
+        }
 
-            (Direction::Down, Direction::Left) => Point { x: 1, y: 1 },
-            (Direction::Left, Direction::Down) => Point { x: 1, y: 1 },
-
-            (Direction::Up, Direction::Right) => Point { x: 0, y: 0 },
-            (Direction::Right, Direction::Up) => Point { x: 0, y: 0 },
-            (d1,d2) => panic!("{}, {}", d1, d2),
-        };
-        let point = &current + &adjustment;
+        let point = &current + &corner;
 
         vertices.push(point);
+
+        current.advance(&motion);
     }
     vertices
 }
@@ -298,8 +303,11 @@ pub fn run(part: Part) -> Result<isize> {
         .map(func)
         .collect::<Result<Vec<_>>>()?;
 
-    //let bounds = get_bounds(&motions);
-    //dump_ppm(&motions, &bounds)?;
+    if matches!(part, Part::Part1) {
+        let bounds = get_bounds(&motions);
+        dump_ppm(&motions, &bounds)?;
+    }
+
     let orientation = get_orientation(&motions);
     let vertices = get_vertices(&motions, orientation);
     let area = get_area(&vertices);
@@ -308,6 +316,6 @@ pub fn run(part: Part) -> Result<isize> {
 
 fn main() -> Result<()> {
     println!("Part1: {}", run(Part::Part1)?);
-    println!("Part1: {}", run(Part::Part2)?);
+    println!("Part2: {}", run(Part::Part2)?);
     Ok(())
 }
