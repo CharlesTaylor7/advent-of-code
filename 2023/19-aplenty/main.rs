@@ -3,14 +3,14 @@
 //! [dependencies]
 //! anyhow = "*"
 //! ```
-#![feature(iter_collect_into, ascii_char, ascii_char_variants)]
+#![feature(iter_collect_into, ascii_char, ascii_char_variants, iter_array_chunks)]
 #![allow(unused_imports)]
 #![allow(unused_mut)]
 #![allow(unused_variables)]
 #![allow(dead_code)]
 #![allow(unreachable_code)]
-use std::ascii;
 use anyhow::{anyhow, bail, Result};
+use std::ascii;
 use std::collections::HashSet;
 use std::{collections::HashMap, rc::Rc};
 
@@ -31,7 +31,7 @@ impl Input {
 
         let parts = iterator.map(Part::parse).collect::<Result<Vec<_>>>()?;
         Ok(Self {
-            pipeline: Pipeline { initial, workflows},
+            pipeline: Pipeline { initial, workflows },
             parts,
         })
     }
@@ -63,8 +63,35 @@ pub struct Part {
 
 impl Part {
     pub fn parse(text: &str) -> Result<Self> {
-        println!("{}", text);
-        Ok(Part { x: 0, m: 0, a: 0, s: 0})
+        let mut part = Part {
+            x: 0,
+            m: 0,
+            a: 0,
+            s: 0,
+        };
+        let prop = None::<Prop>;
+        // slice off first and last character for the brackets
+        let chars = text[1..text.len() - 1].split(['=', ',']);
+        for [k, v] in chars.array_chunks::<2>() {
+            let v = v.parse()?;
+            match k {
+                "x" => {
+                    part.x = v;
+                }
+                "m" => {
+                    part.m = v;
+                }
+                "a" => {
+                    part.a = v;
+                }
+                "s" => {
+                    part.s = v;
+                }
+                k => bail!("Invalid property: {}", k),
+            }
+        }
+
+        Ok(part)
     }
 
     fn get(&self, prop: &Prop) -> usize {
@@ -109,10 +136,16 @@ impl Workflow {
         let id = iterator.next().ok_or(anyhow!("missing workflow id"))?;
 
         let mut steps: Vec<Instruction> = Vec::new();
-        let mut last: None::<Target>;
+        let mut last = None::<Target>;
         for step in iterator {
             if !step.contains(':') {
-               last = Some(Target:: 
+                let target = match step {
+                    "A" => Target::Accept,
+                    "R" => Target::Reject,
+                    id => Target::Workflow(WorkflowId(Rc::from(id))),
+                };
+                last = Some(target);
+                break;
             }
             let chars = step.as_ascii().ok_or(anyhow!("not ascii"))?;
             let mut chars = chars.iter();
@@ -135,36 +168,40 @@ impl Workflow {
             for char in chars.by_ref().take_while(|c| **c != ascii::Char::Colon) {
                 threshold *= 10;
                 threshold += (char.to_u8() - 48) as usize;
-            };
+            }
             let mut target = String::with_capacity(step.len());
             let target = match chars.next().ok_or(anyhow!("missing target"))? {
                 ascii::Char::CapitalA => Target::Accept,
                 ascii::Char::CapitalR => Target::Reject,
                 char => {
                     target.push(char.to_char());
+                    //println!("matched: {:#?}", char.to_char());
                     target.extend(chars.map(|c| c.to_char()));
                     Target::Workflow(WorkflowId(Rc::from(target)))
                 }
             };
-            steps.push(Instruction { prop, op, threshold, target});
+            steps.push(Instruction {
+                condition: Constraint { prop, op, threshold},
+                target,
+            });
         }
 
-        println!("original: {}", text);
-        println!("id: {}", id);
-
-        Ok((WorkflowId(Rc::from(id)), Workflow {
-            steps: vec![],
-            last: Target::Accept,
-        }))
+        Ok((
+            WorkflowId(Rc::from(id)),
+            Workflow {
+                steps,
+                last: last.expect("last"),
+            },
+        ))
     }
     pub fn run<'a>(&'a self, part: &Part) -> &'a Target {
-     for step in self.steps.iter() {
-        if step.matches(part) {
-            return &step.target;
+        for step in self.steps.iter() {
+            if step.condition.matches(part) {
+                return &step.target;
+            }
         }
-     }
-     &self.last
-    } 
+        &self.last
+    }
 }
 
 pub enum Target {
@@ -181,25 +218,30 @@ pub enum Op {
     GreaterThan,
 }
 
+
 pub struct Instruction {
-    pub prop: Prop,
-    pub threshold: usize,
-    pub op: Op,
+    pub condition: Constraint,
     pub target: Target,
 }
 
-impl Instruction {
+pub struct Constraint {
+    pub prop: Prop,
+    pub op: Op,
+    pub threshold: usize,
+}
+
+impl Constraint {
     pub fn matches(&self, part: &Part) -> bool {
         let rating = part.get(&self.prop);
         match self.op {
             Op::GreaterThan => rating > self.threshold,
-            Op::LessThan => rating < self.threshold
+            Op::LessThan => rating < self.threshold,
         }
     }
 }
 
 fn main() -> Result<()> {
-    let text = include_str!("example.txt");
+    let text = include_str!("input.txt");
     let input = Input::parse(text)?;
     println!("Part 1: {}", input.answer());
     Ok(())
