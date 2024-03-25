@@ -244,6 +244,19 @@ fn dump_ppm(motions: &[Motion], bounds: &Bounds) -> Result<()> {
     Ok(())
 }
 
+
+// The corner is a small adjustment to trace around the outside of the trenches perimeter. 
+// We shift up to 1 square down or to the right.
+fn adjust_corner(corner: &mut Point, dir: Direction) {
+    match dir {
+        Direction::Right => { corner.y = 0; },
+        Direction::Left => { corner.y = 1; },
+
+        Direction::Up => { corner.x = 0; },
+        Direction::Down => { corner.x = 1; },
+    }
+}
+
 fn get_vertices(motions: &[Motion], _orientation: Orientation) -> Vec<Point> {
     let n = motions.len();
     let mut vertices = Vec::<Point>::with_capacity(n);
@@ -252,31 +265,14 @@ fn get_vertices(motions: &[Motion], _orientation: Orientation) -> Vec<Point> {
     // The corner is a small adjustment to trace around the outside of the trenches perimeter. 
     // We shift up to 1 square down or to the right.
     let mut corner = Point { x: 0, y: 0 };
-     
-    match motions.last().expect("non empty list").dir {
-        Direction::Right => { corner.y = 0; },
-        Direction::Left => { corner.y = 1; },
-
-        Direction::Up => { corner.x = 0; },
-        Direction::Down => { corner.x = 1; },
-    }
-
-
-    for i in 0..n {
-        let motion = &motions[i];
-        match motion.dir {
-            Direction::Right => { corner.y = 0; },
-            Direction::Left => { corner.y = 1; },
-
-            Direction::Up => { corner.x = 0; },
-            Direction::Down => { corner.x = 1; },
-        }
-
+    adjust_corner(&mut corner, motions.last().expect("non empty list").dir);
+    for motion in motions.iter() {
+        adjust_corner(&mut corner, motion.dir);
         let point = &current + &corner;
 
         vertices.push(point);
 
-        current.advance(&motion);
+        current.advance(motion);
     }
     vertices
 }
