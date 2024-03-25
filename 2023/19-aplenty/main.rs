@@ -14,6 +14,11 @@ use std::ascii;
 use std::collections::HashSet;
 use std::{collections::HashMap, rc::Rc};
 
+// For part 2, the idea is to trace all paths.
+// we send an idealized part throught the machine.
+// its just a list of constraints. 
+// for each constraint encountered, we split the part in two, and trace both those paths.
+// then we tally up the idealized parts at the end.
 pub struct Input {
     pub pipeline: Pipeline,
     pub parts: Vec<Part>,
@@ -36,7 +41,7 @@ impl Input {
         })
     }
 
-    pub fn answer(&self) -> usize {
+    pub fn accepted_total_rating(&self) -> usize {
         let mut result = 0;
         for part in self.parts.iter() {
             if self.pipeline.accepts(part) {
@@ -47,6 +52,15 @@ impl Input {
     }
 }
 
+
+// The platonic ideal of a part. It doesn't have any concrete values, just a list of constraints it
+// must satisfy
+#[derive(Clone)]
+pub struct PlatonicPart {
+    pub constraints: Vec<Constraint>,
+}
+
+#[derive(Clone)]
 pub enum Prop {
     X,
     M,
@@ -123,6 +137,20 @@ impl Pipeline {
             }
         }
     }
+
+    pub fn parts_accepted(&self) -> usize {
+        let count = 0;
+        let mut queue: Vec<(WorkflowId, PlatonicPart)> = Vec::new();
+        queue.push((self.initial.clone(), PlatonicPart { constraints: Vec::new()}));
+        while let Some((workflow_id, part)) = queue.pop() {
+            
+        }
+        
+
+        count
+    }
+
+
 }
 
 pub struct Workflow {
@@ -213,9 +241,23 @@ pub enum Target {
 #[derive(Hash, Eq, PartialEq, Clone)]
 pub struct WorkflowId(Rc<str>);
 
+#[derive(Clone)]
 pub enum Op {
     LessThan,
     GreaterThan,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
+}
+
+impl Op {
+    pub fn not(&self) -> Self {
+        match self {
+            Op::GreaterThan => Op::LessThanOrEqual,
+            Op::LessThan => Op::GreaterThanOrEqual
+            Op::GreaterThanOrEqual => Op::LessThan,
+            Op::LessThanOrEqual => Op::GreaterThan,
+        }
+    }
 }
 
 
@@ -224,6 +266,7 @@ pub struct Instruction {
     pub target: Target,
 }
 
+#[derive(Clone)]
 pub struct Constraint {
     pub prop: Prop,
     pub op: Op,
@@ -236,6 +279,9 @@ impl Constraint {
         match self.op {
             Op::GreaterThan => rating > self.threshold,
             Op::LessThan => rating < self.threshold,
+
+            Op::GreaterThanOrEqual => rating >= self.threshold,
+            Op::LessThanOrEqual => rating <= self.threshold,
         }
     }
 }
@@ -243,7 +289,8 @@ impl Constraint {
 fn main() -> Result<()> {
     let text = include_str!("input.txt");
     let input = Input::parse(text)?;
-    println!("Part 1: {}", input.answer());
+    println!("Part 1: {}", input.accepted_total_rating());
+    println!("Part 2: {}", input.pipeline.parts_accepted());
     Ok(())
 }
 
