@@ -4,19 +4,13 @@
 //! anyhow = "*"
 //! ```
 #![feature(iter_collect_into, ascii_char, ascii_char_variants, iter_array_chunks)]
-#![allow(unused_imports)]
-#![allow(unused_mut)]
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(unreachable_code)]
 use anyhow::{anyhow, bail, Result};
 use std::ascii;
-use std::collections::HashSet;
 use std::{collections::HashMap, rc::Rc};
 
 // For part 2, the idea is to trace all paths.
 // we send an idealized part throught the machine.
-// its just a list of constraints. 
+// its just a list of constraints.
 // for each constraint encountered, we split the part in two, and trace both those paths.
 // then we tally up the idealized parts at the end.
 pub struct Input {
@@ -52,8 +46,7 @@ impl Input {
     }
 }
 
-
-// The platonic ideal of a part. 
+// The platonic ideal of a part.
 // It doesn't have any concrete values, just ranges of possible values;
 #[derive(Clone)]
 pub struct PlatonicPart {
@@ -64,16 +57,61 @@ pub struct PlatonicPart {
 }
 
 impl PlatonicPart {
+    pub fn get_mut(&mut self, prop: Prop) -> &mut Range {
+        match prop {
+            Prop::X => &mut self.x,
+            Prop::M => &mut self.m,
+            Prop::A => &mut self.a,
+            Prop::S => &mut self.s,
+        }
+    }
+
     pub fn new() -> Self {
         let range = Range { min: 1, max: 4000 };
-        PlatonicPart { x: range.clone(), m: range.clone(), a: range.clone(), s: range }
+        PlatonicPart {
+            x: range.clone(),
+            m: range.clone(),
+            a: range.clone(),
+            s: range,
+        }
     }
     pub fn cardinality(&self) -> usize {
         self.x.cardinality() * self.m.cardinality() * self.a.cardinality() * self.s.cardinality()
     }
 
     pub fn split(self, condition: &Condition) -> (Option<Self>, Option<Self>) {
-        todo!()
+        let mut with = self.clone();
+        let mut without = self;
+
+        let with_range = with.get_mut(condition.prop);
+        let without_range = without.get_mut(condition.prop);
+        match condition.op {
+            Op::GreaterThan => {
+                with_range.min = std::cmp::max(with_range.min, condition.threshold + 1);
+                // less than or equal to 
+                without_range.max = std::cmp::min(without_range.max, condition.threshold);
+            }
+
+            Op::LessThan => {
+                with_range.max = std::cmp::min(with_range.max, condition.threshold - 1);
+
+                // greater than or equal to 
+                without_range.min = std::cmp::max(without_range.min, condition.threshold);
+            }
+        }
+
+        (
+            if without_range.cardinality() > 0 {
+                Some(without)
+            } else {
+                None
+            },
+            if with_range.cardinality() > 0 {
+                Some(with)
+            } else {
+                None
+            },
+        )
     }
 }
 
@@ -85,11 +123,15 @@ pub struct Range {
 
 impl Range {
     pub fn cardinality(&self) -> usize {
-        self.max - self.min + 1
+        if self.max < self.min {
+            0
+        } else {
+            self.max - self.min + 1
+        }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum Prop {
     X,
     M,
@@ -112,7 +154,6 @@ impl Part {
             a: 0,
             s: 0,
         };
-        let prop = None::<Prop>;
         // slice off first and last character for the brackets
         let chars = text[1..text.len() - 1].split(['=', ',']);
         for [k, v] in chars.array_chunks::<2>() {
@@ -137,7 +178,7 @@ impl Part {
         Ok(part)
     }
 
-    fn get(&self, prop: &Prop) -> usize {
+    fn get(&self, prop: Prop) -> usize {
         match prop {
             Prop::X => self.x,
             Prop::M => self.m,
@@ -178,44 +219,37 @@ impl Pipeline {
                 let (old, new) = part.split(&step.condition);
                 if let Some(new) = new {
                     match &step.target {
-                        Target::Accept => { 
+                        Target::Accept => {
                             count += new.cardinality();
                         }
 
                         // enqueue
-                        Target::Workflow(new_id) => { 
-                            queue.push((new_id.clone(), new))
-                        }
+                        Target::Workflow(new_id) => queue.push((new_id.clone(), new)),
 
                         // do nothing
-                        Target::Reject => { 
-                        }
+                        Target::Reject => {}
                     }
                 }
                 if let Some(old) = old {
                     part = old
-                }
-                else {
+                } else {
                     continue 'queue;
                 }
             }
 
             match &workflow.last {
-                Target::Accept => { 
+                Target::Accept => {
                     count += part.cardinality();
                 }
 
                 // enqueue
-                Target::Workflow(new_id) => { 
-                    queue.push((new_id.clone(), part))
-                }
+                Target::Workflow(new_id) => queue.push((new_id.clone(), part)),
 
                 // do nothing
-                Target::Reject => { 
-                }
+                Target::Reject => {}
             }
         }
-        
+
         count
     }
 }
@@ -276,7 +310,11 @@ impl Workflow {
                 }
             };
             steps.push(Instruction {
-                condition: Condition { prop, op, threshold},
+                condition: Condition {
+                    prop,
+                    op,
+                    threshold,
+                },
                 target,
             });
         }
@@ -314,7 +352,6 @@ pub enum Op {
     GreaterThan,
 }
 
-
 pub struct Instruction {
     pub condition: Condition,
     pub target: Target,
@@ -329,11 +366,10 @@ pub struct Condition {
 
 impl Condition {
     pub fn matches(&self, part: &Part) -> bool {
-        let rating = part.get(&self.prop);
+        let rating = part.get(self.prop);
         match self.op {
             Op::GreaterThan => rating > self.threshold,
             Op::LessThan => rating < self.threshold,
-
         }
     }
 }
@@ -344,14 +380,4 @@ fn main() -> Result<()> {
     println!("Part 1: {}", input.accepted_total_rating());
     println!("Part 2: {}", input.pipeline.parts_accepted());
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::*;
-
-    #[test]
-    pub fn dummy() {
-        assert_eq!(2 + 2, 4);
-    }
 }
