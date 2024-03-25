@@ -8,12 +8,6 @@ use std::collections::HashSet;
 use std::fs;
 use std::io::{BufWriter, Write};
 
-// PArt 2 is rough...
-// The hexadecimal parsing is no big deal
-// but the numbers are now much larger. My code won't scale properly now..
-// But just for fun let's convert the code to handle hex and see where my code breaks.
-//
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Direction {
     Up,
