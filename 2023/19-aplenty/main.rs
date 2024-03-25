@@ -53,11 +53,40 @@ impl Input {
 }
 
 
-// The platonic ideal of a part. It doesn't have any concrete values, just a list of constraints it
-// must satisfy
+// The platonic ideal of a part. 
+// It doesn't have any concrete values, just ranges of possible values;
 #[derive(Clone)]
 pub struct PlatonicPart {
-    pub constraints: Vec<Constraint>,
+    pub x: Range,
+    pub m: Range,
+    pub a: Range,
+    pub s: Range,
+}
+
+impl PlatonicPart {
+    pub fn new() -> Self {
+        let range = Range { min: 1, max: 4000 };
+        PlatonicPart { x: range.clone(), m: range.clone(), a: range.clone(), s: range }
+    }
+    pub fn cardinality(&self) -> usize {
+        self.x.cardinality() * self.m.cardinality() * self.a.cardinality() * self.s.cardinality()
+    }
+
+    pub fn split(self, condition: &Condition) -> (Option<Self>, Option<Self>) {
+        todo!()
+    }
+}
+
+#[derive(Clone)]
+pub struct Range {
+    pub min: usize,
+    pub max: usize,
+}
+
+impl Range {
+    pub fn cardinality(&self) -> usize {
+        self.max - self.min + 1
+    }
 }
 
 #[derive(Clone)]
@@ -139,18 +168,56 @@ impl Pipeline {
     }
 
     pub fn parts_accepted(&self) -> usize {
-        let count = 0;
+        let mut count = 0;
         let mut queue: Vec<(WorkflowId, PlatonicPart)> = Vec::new();
-        queue.push((self.initial.clone(), PlatonicPart { constraints: Vec::new()}));
-        while let Some((workflow_id, part)) = queue.pop() {
-            
+        queue.push((self.initial.clone(), PlatonicPart::new()));
+
+        'queue: while let Some((workflow_id, mut part)) = queue.pop() {
+            let workflow = &self.workflows[&workflow_id];
+            for step in workflow.steps.iter() {
+                let (old, new) = part.split(&step.condition);
+                if let Some(new) = new {
+                    match &step.target {
+                        Target::Accept => { 
+                            count += new.cardinality();
+                        }
+
+                        // enqueue
+                        Target::Workflow(new_id) => { 
+                            queue.push((new_id.clone(), new))
+                        }
+
+                        // do nothing
+                        Target::Reject => { 
+                        }
+                    }
+                }
+                if let Some(old) = old {
+                    part = old
+                }
+                else {
+                    continue 'queue;
+                }
+            }
+
+            match &workflow.last {
+                Target::Accept => { 
+                    count += part.cardinality();
+                }
+
+                // enqueue
+                Target::Workflow(new_id) => { 
+                    queue.push((new_id.clone(), part))
+                }
+
+                // do nothing
+                Target::Reject => { 
+                }
+            }
         }
         
-
         count
     }
-
-
 }
 
 pub struct Workflow {
@@ -209,7 +276,7 @@ impl Workflow {
                 }
             };
             steps.push(Instruction {
-                condition: Constraint { prop, op, threshold},
+                condition: Condition { prop, op, threshold},
                 target,
             });
         }
@@ -245,43 +312,28 @@ pub struct WorkflowId(Rc<str>);
 pub enum Op {
     LessThan,
     GreaterThan,
-    LessThanOrEqual,
-    GreaterThanOrEqual,
-}
-
-impl Op {
-    pub fn not(&self) -> Self {
-        match self {
-            Op::GreaterThan => Op::LessThanOrEqual,
-            Op::LessThan => Op::GreaterThanOrEqual
-            Op::GreaterThanOrEqual => Op::LessThan,
-            Op::LessThanOrEqual => Op::GreaterThan,
-        }
-    }
 }
 
 
 pub struct Instruction {
-    pub condition: Constraint,
+    pub condition: Condition,
     pub target: Target,
 }
 
 #[derive(Clone)]
-pub struct Constraint {
+pub struct Condition {
     pub prop: Prop,
     pub op: Op,
     pub threshold: usize,
 }
 
-impl Constraint {
+impl Condition {
     pub fn matches(&self, part: &Part) -> bool {
         let rating = part.get(&self.prop);
         match self.op {
             Op::GreaterThan => rating > self.threshold,
             Op::LessThan => rating < self.threshold,
 
-            Op::GreaterThanOrEqual => rating >= self.threshold,
-            Op::LessThanOrEqual => rating <= self.threshold,
         }
     }
 }
