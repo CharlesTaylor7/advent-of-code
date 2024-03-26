@@ -6,6 +6,9 @@
 use anyhow::{anyhow, bail, Result};
 use std::char;
 use std::collections::{HashMap, VecDeque};
+use std::fs;
+use std::io::{Write, BufWriter};
+use std::process::Command;
 
 const BROADCASTER: ModuleId = ModuleId("broadcaster");
 
@@ -66,6 +69,7 @@ pub struct Network<'a> {
     pub messages: VecDeque<Packet<'a>>,
     pub low_pulses: usize,
     pub high_pulses: usize,
+    pub push_count: usize,
 }
 
 impl<'a> Network<'a> {
@@ -77,11 +81,9 @@ impl<'a> Network<'a> {
     }
 
     pub fn part2(&mut self) -> Result<usize> {
-        let mut i = 0;
         loop {
-            i += 1;
             if self.push_button_once()? {
-                return Ok(i);
+                return Ok(self.push_count);
             }
         }
     }
@@ -93,6 +95,7 @@ impl<'a> Network<'a> {
     }
       
     pub fn push_button_once(&mut self) -> Result<bool> {
+        self.push_count += 1;
         self.messages.push_back(Packet { from: ModuleId("button"), to: BROADCASTER, pulse: Pulse::Low});
         while let Some(packet) = self.messages.pop_front() {
             if packet.to == ModuleId("rx") && matches!(packet.pulse, Pulse::Low) {
@@ -146,7 +149,7 @@ impl<'a> Network<'a> {
 
     pub fn parse(text: &'a str) -> Result<Self> {
         let mut modules = HashMap::new();
-        let mut module_cables = HashMap::new();
+        let mut cables = HashMap::new();
 
         for line in text.lines() {
             let (id, module, rest): (ModuleId, Module, &str) = {
@@ -176,12 +179,10 @@ impl<'a> Network<'a> {
             modules.insert(id, module);
 
             let rest = rest.trim_start_matches([' ', '-', '>']);
-
-            let cables = rest.split(", ").map(|id| ModuleId(id)).collect::<Vec<_>>();
-            module_cables.insert(id, cables);
+            cables.insert(id, rest.split(", ").map(|id| ModuleId(id)).collect());
         }
 
-        for (id, cables) in module_cables.iter() {
+        for (id, cables) in cables.iter() {
             for cable in cables {
                 if let Some(Module::Conjunction { inputs }) = modules.get_mut(cable) {
                     inputs.insert(*id, Pulse::Low);
@@ -194,8 +195,54 @@ impl<'a> Network<'a> {
             high_pulses: 0,
             messages: VecDeque::new(),
             modules,
-            cables: module_cables,
+            cables,
+            push_count: 0,
         })
+    }
+
+    pub fn dump_graphviz(&self) -> Result<()>{
+        let file = fs::OpenOptions::new()
+            .truncate(true)
+            .write(true)
+            .create(true)
+            .open(format!("network-{}.dot", self.push_count))?;
+        let mut file = BufWriter::new(file);
+
+        let indent = "";
+        write!(&mut file, "strict digraph {{\n")?;
+        // min rank
+        write!(&mut file, "{indent: <2}subgraph {{\n")?;
+        write!(&mut file, "{indent: <4}rank=min;\n{indent: <4}")?;
+        write!(&mut file, "{}; ", BROADCASTER.0)?;
+        write!(&mut file, "\n{indent: <2}}}\n")?;
+
+        // max rank
+        write!(&mut file, "{indent: <2}subgraph {{\n")?;
+        write!(&mut file, "{indent: <4}rank=max;\n{indent: <4}")?;
+        write!(&mut file, "{}; ", "rx")?;
+        write!(&mut file, "\n{indent: <2}}}\n")?;
+
+        for (from, to) in self.cables.iter() {
+            for to in to.iter() {
+                // todo: include module type and module state as colors or labels
+                write!(
+                    &mut file,
+                    "{indent: <2}{} -> {}\n",
+                    from.0, to.0
+                )?;
+            }
+        }
+        write!(&mut file, "}}")?;
+        file.flush()?;
+        Command::new("dot")
+            .args([
+                "-Tsvg",
+                &format!("network-{}.dot", self.push_count),
+                "-o",
+                &format!("network-{}.svg", self.push_count),
+            ])
+            .output()?;
+        Ok(())
     }
 }
 
