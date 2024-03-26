@@ -67,6 +67,7 @@ type Pulses<'a> = HashMap<(ModuleId<'a>, ModuleId<'a>), Pulse>;
 #[derive(Debug, Clone)]
 pub struct Network<'a> {
     pub initial: ModuleId<'a>,
+    pub terminal: ModuleId<'a>,
     pub modules: HashMap<ModuleId<'a>, Module<'a>>,
     pub cables: HashMap<ModuleId<'a>, Rc<[ModuleId<'a>]>>,
 }
@@ -194,6 +195,77 @@ impl<'a> NetworkEngine<'a> {
         }
         Ok(())
     }
+
+    pub fn dump_graphviz(&self, pulses: &Pulses<'a>) -> Result<()> {
+        let file = fs::OpenOptions::new()
+            .truncate(true)
+            .write(true)
+            .create(true)
+            .open(format!("graphviz/dot/{}.dot", self.push_count))?;
+        let mut file = BufWriter::new(file);
+
+        let indent = "";
+        write!(&mut file, "strict digraph {{\n")?;
+        // min rank
+        write!(&mut file, "{indent: <2}subgraph {{\n")?;
+        write!(&mut file, "{indent: <4}rank=min;\n{indent: <4}")?;
+        write!(&mut file, "{}; ", self.network.initial.0)?;
+        write!(&mut file, "\n{indent: <2}}}\n")?;
+
+        // max rank
+        write!(&mut file, "{indent: <2}subgraph {{\n")?;
+        write!(&mut file, "{indent: <4}rank=max;\n{indent: <4}")?;
+        write!(&mut file, "{}; ", self.network.terminal.0)?;
+        write!(&mut file, "\n{indent: <2}}}\n")?;
+
+        // node labels
+        for (id, module) in self.network.modules.iter() {
+            let module_type = match module {
+                Module::Broadcast => "",
+                Module::FlipFlop { .. } => "%",
+                Module::Conjunction { .. } => "&",
+            };
+            let color = match module {
+                Module::FlipFlop { switch: Switch::On } => "blue",
+                Module::FlipFlop {
+                    switch: Switch::Off,
+                } => "green",
+                _ => "lightgrey",
+            };
+
+            write!(
+                &mut file,
+                "{indent: <2}{}[label=\"{}{}\";color=\"{}\"]\n",
+                id.0, module_type, id.0, color
+            )?;
+        }
+
+        for (from, to) in self.network.cables.iter() {
+            for to in to.iter() {
+                let label = match pulses.get(&(*from, *to)) {
+                    Some(Pulse::Low) => "green",
+                    Some(Pulse::High) => "blue",
+                    None => "grey",
+                };
+                write!(
+                    &mut file,
+                    "{indent: <2}{} -> {}[color=\"{}\"]\n",
+                    from.0, to.0, label
+                )?;
+            }
+        }
+        write!(&mut file, "}}")?;
+        file.flush()?;
+        Command::new("dot")
+            .args([
+                "-Tsvg",
+                &format!("graphviz/dot/{}.dot", self.push_count),
+                "-o",
+                &format!("graphviz/svg/{}.svg", self.push_count),
+            ])
+            .output()?;
+        Ok(())
+    }
 }
 
 impl<'a> Network<'a> {
@@ -209,10 +281,12 @@ impl<'a> Network<'a> {
         for network in networks.into_iter().take(1) {
             let mut pulses = HashMap::new();
             let mut engine = NetworkEngine::new(network);
+
+            engine.dump_graphviz(&pulses)?;
             for _i in 0..100 {
                 engine.push_button(Some(&mut pulses))?;
+                engine.dump_graphviz(&pulses)?;
             }
-            engine.network.dump_graphviz(&pulses)?;
         }
         Ok(42)
     }
@@ -246,6 +320,7 @@ impl<'a> Network<'a> {
         }
         Self {
             initial,
+            terminal,
             modules,
             cables,
         }
@@ -301,59 +376,8 @@ impl<'a> Network<'a> {
             modules,
             cables,
             initial: BROADCASTER,
+            terminal: ModuleId("rx"),
         })
-    }
-
-    pub fn dump_graphviz(&self, pulses: &Pulses<'a>) -> Result<()> {
-        let file = fs::OpenOptions::new()
-            .truncate(true)
-            .write(true)
-            .create(true)
-            .open(format!("graphviz/network.dot"))?;
-        let mut file = BufWriter::new(file);
-
-        let indent = "";
-        write!(&mut file, "strict digraph {{\n")?;
-
-        // node labels
-        for (id, module) in self.modules.iter() {
-            let module_type = match module {
-                Module::Broadcast => "",
-                Module::FlipFlop { .. } => "%",
-                Module::Conjunction { .. } => "&",
-            };
-            write!(
-                &mut file,
-                "{indent: <2}{}[label=\"{}{}\"]\n",
-                id.0, module_type, id.0
-            )?;
-        }
-
-        for (from, to) in self.cables.iter() {
-            for to in to.iter() {
-                let label = match pulses.get(&(*from, *to)) {
-                    Some(Pulse::Low) => "green",
-                    Some(Pulse::High) => "blue",
-                    None => "grey",
-                };
-                write!(
-                    &mut file,
-                    "{indent: <2}{} -> {}[color=\"{}\"]\n",
-                    from.0, to.0, label
-                )?;
-            }
-        }
-        write!(&mut file, "}}")?;
-        file.flush()?;
-        Command::new("dot")
-            .args([
-                "-Tsvg",
-                &format!("graphviz/network.dot"),
-                "-o",
-                &format!("graphviz/network.svg"),
-            ])
-            .output()?;
-        Ok(())
     }
 }
 
