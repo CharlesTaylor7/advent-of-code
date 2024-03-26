@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <script src="//d3js.org/d3.v5.min.js"></script>
+  <script src="https://unpkg.com/@hpcc-js/wasm@0.3.11/dist/index.min.js"></script>
+  <script src="https://unpkg.com/d3-graphviz@3.0.5/build/d3-graphviz.js"></script>
+</head>
+<body>
+  <div id="graph" style="text-align: center;"></div>
+  <script type="module">
+    import {default: dots} from './graph.json' assert {type: 'json'}
+
+    const graphviz = 
+      d3
+      .select("#graph")
+      .graphviz()
+      .transition(() => 
+        d3.transition("main")
+          .ease(d3.easeLinear)
+          .delay(500)
+          .duration(500)
+      )
+      .logEvents(true)
+      .on("initEnd", render);
+
+    function render(index = 0) {
+      let graph = dots[index];
+      if (graph) {
+        graphviz
+          .renderDot(dots[index])
+          .on("end", () => render(index + 1));
+      }
+    }
+  </script>
+</body>

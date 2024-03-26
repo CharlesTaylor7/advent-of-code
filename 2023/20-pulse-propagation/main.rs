@@ -7,7 +7,7 @@ use anyhow::{anyhow, bail, Result};
 use std::char;
 use std::collections::{HashMap, VecDeque};
 use std::fs;
-use std::io::{Write, BufWriter};
+use std::io::{BufWriter, Write};
 use std::process::Command;
 
 const BROADCASTER: ModuleId = ModuleId("broadcaster");
@@ -24,7 +24,7 @@ pub enum Switch {
     Off,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Module<'a> {
     Broadcast,
     FlipFlop {
@@ -35,10 +35,10 @@ pub enum Module<'a> {
     },
 }
 
-impl <'a> Module<'a> {
+impl<'a> Module<'a> {
     pub fn reset(&mut self) {
         match self {
-            Self::Broadcast => {},
+            Self::Broadcast => {}
             Self::FlipFlop { switch } => {
                 *switch = Switch::Off;
             }
@@ -61,57 +61,92 @@ pub struct Packet<'a> {
     to: ModuleId<'a>,
     pulse: Pulse,
 }
+type Pulses<'a> = HashMap<(ModuleId<'a>, ModuleId<'a>), Pulse>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Network<'a> {
+    pub initial: ModuleId<'a>,
     pub modules: HashMap<ModuleId<'a>, Module<'a>>,
     pub cables: HashMap<ModuleId<'a>, Vec<ModuleId<'a>>>,
+}
+
+#[derive(Debug)]
+pub struct NetworkEngine<'a> {
+    pub network: Network<'a>,
     pub messages: VecDeque<Packet<'a>>,
     pub low_pulses: usize,
     pub high_pulses: usize,
     pub push_count: usize,
 }
 
-impl<'a> Network<'a> {
+impl<'a> NetworkEngine<'a> {
+    pub fn new(network: Network<'a>) -> Self {
+        Self {
+            network,
+            messages: VecDeque::new(),
+            low_pulses: 0,
+            high_pulses: 0,
+            push_count: 0,
+        }
+    }
+
     pub fn part1(&mut self) -> Result<usize> {
         for _ in 0..1000 {
-            self.push_button_once()?;
+            self.push_button(None)?;
         }
         Ok(self.low_pulses * self.high_pulses)
     }
 
     pub fn part2(&mut self) -> Result<usize> {
-        loop {
-            if self.push_button_once()? {
-                return Ok(self.push_count);
-            }
+        let mut pulses: Pulses<'a> = HashMap::new();
+        // self.dump_graphviz(&pulses)?;
+        for _i in 0..1000 {
+            self.push_button(Some(&mut pulses))?;
+            // self.dump_graphviz(&pulses)?;
         }
+        Ok(self.push_count)
     }
 
     pub fn reset(&mut self) {
-        for module in self.modules.values_mut() {
-            module.reset();
-        }
+        self.network.reset();
+        self.push_count = 0;
+        self.low_pulses = 0;
+        self.high_pulses = 0;
+        self.messages.clear();
     }
-      
-    pub fn push_button_once(&mut self) -> Result<bool> {
+
+    pub fn push_button(&mut self, mut pulses: Option<&mut Pulses<'a>>) -> Result<()> {
         self.push_count += 1;
-        self.messages.push_back(Packet { from: ModuleId("button"), to: BROADCASTER, pulse: Pulse::Low});
+        self.messages.push_back(Packet {
+            from: ModuleId("button"),
+            to: self.network.initial,
+            pulse: Pulse::Low,
+        });
+
         while let Some(packet) = self.messages.pop_front() {
-            if packet.to == ModuleId("rx") && matches!(packet.pulse, Pulse::Low) {
-                return Ok(true);
+            if let Some(map) = pulses.take() {
+                map.insert((packet.from, packet.to), packet.pulse);
+                pulses = Some(map);
             }
-            
+
             match packet.pulse {
-                Pulse::Low => { self.low_pulses += 1;}
-                Pulse::High => { self.high_pulses += 1;}
+                Pulse::Low => {
+                    self.low_pulses += 1;
+                }
+                Pulse::High => {
+                    self.high_pulses += 1;
+                }
             }
-            
-            match self.modules.get_mut(&packet.to) {
-                None => {},
+
+            match self.network.modules.get_mut(&packet.to) {
+                None => {}
                 Some(Module::Broadcast) => {
-                    for id in self.cables[&packet.to].iter() {
-                        self.messages.push_back(Packet { from: packet.to, to: *id, pulse: packet.pulse });
+                    for id in self.network.cables[&packet.to].iter() {
+                        self.messages.push_back(Packet {
+                            from: packet.to,
+                            to: *id,
+                            pulse: packet.pulse,
+                        });
                     }
                 }
 
@@ -127,24 +162,48 @@ impl<'a> Network<'a> {
                             Switch::Off => Pulse::Low,
                         };
 
-                        for id in self.cables[&packet.to].iter() {
-                            self.messages.push_back(Packet { from: packet.to, to: *id, pulse });
+                        for id in self.network.cables[&packet.to].iter() {
+                            self.messages.push_back(Packet {
+                                from: packet.to,
+                                to: *id,
+                                pulse,
+                            });
                         }
                     }
                 }
 
                 Some(Module::Conjunction { inputs }) => {
                     inputs.insert(packet.from, packet.pulse);
-                    let pulse = if inputs.values().all(|p| matches!(p, Pulse::High)) { Pulse::Low } else { Pulse::High };
+                    let pulse = if inputs.values().all(|p| matches!(p, Pulse::High)) {
+                        Pulse::Low
+                    } else {
+                        Pulse::High
+                    };
 
-                    for id in self.cables[&packet.to].iter() {
-                        self.messages.push_back(Packet { from: packet.to, to: *id, pulse });
+                    for id in self.network.cables[&packet.to].iter() {
+                        self.messages.push_back(Packet {
+                            from: packet.to,
+                            to: *id,
+                            pulse,
+                        });
                     }
                 }
             }
-
         }
-        Ok(false)
+        Ok(())
+    }
+}
+
+impl<'a> Network<'a> {
+    pub fn reset(&mut self) {
+        for module in self.modules.values_mut() {
+            module.reset();
+        }
+    }
+
+    pub fn cut(&mut self, initial: ModuleId<'a>, terminal: ModuleId<'a>) {
+        self.initial = initial;
+        self.cables.remove(&terminal);
     }
 
     pub fn parse(text: &'a str) -> Result<Self> {
@@ -163,7 +222,9 @@ impl<'a> Network<'a> {
                     let id = ModuleId(id);
 
                     let module = if &line[0..1] == "%" {
-                        Module::FlipFlop { switch: Switch::Off }
+                        Module::FlipFlop {
+                            switch: Switch::Off,
+                        }
                     } else {
                         Module::Conjunction {
                             inputs: HashMap::new(),
@@ -191,21 +252,18 @@ impl<'a> Network<'a> {
         }
 
         Ok(Self {
-            low_pulses: 0,
-            high_pulses: 0,
-            messages: VecDeque::new(),
             modules,
             cables,
-            push_count: 0,
+            initial: BROADCASTER,
         })
     }
 
-    pub fn dump_graphviz(&self) -> Result<()>{
+    pub fn dump_graphviz(&self, pulses: &Pulses<'a>) -> Result<()> {
         let file = fs::OpenOptions::new()
             .truncate(true)
             .write(true)
             .create(true)
-            .open(format!("network-{}.dot", self.push_count))?;
+            .open(format!("graphviz/network-.dot"))?;
         let mut file = BufWriter::new(file);
 
         let indent = "";
@@ -222,13 +280,31 @@ impl<'a> Network<'a> {
         write!(&mut file, "{}; ", "rx")?;
         write!(&mut file, "\n{indent: <2}}}\n")?;
 
+        // node labels
+        for (id, module) in self.modules.iter() {
+            let module_type = match module {
+                Module::Broadcast => "",
+                Module::FlipFlop { .. } => "%",
+                Module::Conjunction { .. } => "&",
+            };
+            write!(
+                &mut file,
+                "{indent: <2}{}[label=\"{}{}\"]\n",
+                id.0, module_type, id.0
+            )?;
+        }
+
         for (from, to) in self.cables.iter() {
             for to in to.iter() {
-                // todo: include module type and module state as colors or labels
+                let label = match pulses.get(&(*from, *to)) {
+                    Some(Pulse::Low) => "green",
+                    Some(Pulse::High) => "blue",
+                    None => "grey",
+                };
                 write!(
                     &mut file,
-                    "{indent: <2}{} -> {}\n",
-                    from.0, to.0
+                    "{indent: <2}{} -> {}[color=\"{}\"]\n",
+                    from.0, to.0, label
                 )?;
             }
         }
@@ -237,9 +313,9 @@ impl<'a> Network<'a> {
         Command::new("dot")
             .args([
                 "-Tsvg",
-                &format!("network-{}.dot", self.push_count),
+                &format!("graphviz/network.dot"),
                 "-o",
-                &format!("network-{}.svg", self.push_count),
+                &format!("graphviz/network.svg"),
             ])
             .output()?;
         Ok(())
@@ -248,11 +324,12 @@ impl<'a> Network<'a> {
 
 fn main() -> Result<()> {
     let input = include_str!("input.txt");
-    let mut network = Network::parse(input)?;
+    let network = Network::parse(input)?;
+    let mut engine = NetworkEngine::new(network);
 
-    println!("Part 1: {}", network.part1()?);
-    network.reset();
-    println!("Part 2: {}", network.part2()?);
+    println!("Part 1: {}", engine.part1()?);
+    engine.reset();
+    println!("Part 2: {}", engine.part2()?);
 
     Ok(())
 }
