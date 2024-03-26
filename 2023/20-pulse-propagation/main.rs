@@ -96,17 +96,6 @@ impl<'a> NetworkEngine<'a> {
         }
         Ok(self.low_pulses * self.high_pulses)
     }
-
-    pub fn part2(&mut self) -> Result<usize> {
-        let mut pulses: Pulses<'a> = HashMap::new();
-        // self.dump_graphviz(&pulses)?;
-        for _i in 0..1000 {
-            self.push_button(Some(&mut pulses))?;
-            // self.dump_graphviz(&pulses)?;
-        }
-        Ok(self.push_count)
-    }
-
     pub fn reset(&mut self) {
         self.network.reset();
         self.push_count = 0;
@@ -195,15 +184,35 @@ impl<'a> NetworkEngine<'a> {
 }
 
 impl<'a> Network<'a> {
+    pub fn part2(self) -> Result<usize> {
+        let networks = [
+            self.clone().cut(ModuleId("ts"), ModuleId("sl")),
+            self.clone().cut(ModuleId("ls"), ModuleId("pq")),
+            self.clone().cut(ModuleId("fv"), ModuleId("rr")),
+            self.cut(ModuleId("bn"), ModuleId("jz")),
+        ];
+
+        for network in networks {
+            let mut pulses = HashMap::new();
+            let mut engine = NetworkEngine::new(network);
+            for _i in 0..1000 {
+                engine.push_button(Some(&mut pulses))?;
+                engine.network.dump_graphviz(&pulses)?;
+            }
+        }
+        Ok(42)
+    }
+
     pub fn reset(&mut self) {
         for module in self.modules.values_mut() {
             module.reset();
         }
     }
 
-    pub fn cut(&mut self, initial: ModuleId<'a>, terminal: ModuleId<'a>) {
+    pub fn cut(mut self, initial: ModuleId<'a>, terminal: ModuleId<'a>) -> Self {
         self.initial = initial;
         self.cables.remove(&terminal);
+        self
     }
 
     pub fn parse(text: &'a str) -> Result<Self> {
@@ -328,8 +337,11 @@ fn main() -> Result<()> {
     let mut engine = NetworkEngine::new(network);
 
     println!("Part 1: {}", engine.part1()?);
-    engine.reset();
-    println!("Part 2: {}", engine.part2()?);
+
+    let NetworkEngine { mut network, .. } = engine;
+    network.reset();
+
+    println!("Part 2: {}", network.part2()?);
 
     Ok(())
 }
