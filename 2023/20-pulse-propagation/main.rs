@@ -32,6 +32,23 @@ pub enum Module<'a> {
     },
 }
 
+impl <'a> Module<'a> {
+    pub fn reset(&mut self) {
+        match self {
+            Self::Broadcast => {},
+            Self::FlipFlop { switch } => {
+                *switch = Switch::Off;
+            }
+
+            Self::Conjunction { inputs } => {
+                for pulse in inputs.values_mut() {
+                    *pulse = Pulse::Low;
+                }
+            }
+        }
+    }
+}
+
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug)]
 pub struct ModuleId<'a>(&'a str);
 
@@ -52,17 +69,36 @@ pub struct Network<'a> {
 }
 
 impl<'a> Network<'a> {
-    pub fn push_button(&mut self, count: usize) -> Result<()> {
-        for _ in 0..count {
+    pub fn part1(&mut self) -> Result<usize> {
+        for _ in 0..1000 {
             self.push_button_once()?;
-            // println!("{:#?}", self.modules.values());
         }
-        Ok(())
+        Ok(self.low_pulses * self.high_pulses)
     }
 
-    pub fn push_button_once(&mut self) -> Result<()> {
+    pub fn part2(&mut self) -> Result<usize> {
+        let mut i = 0;
+        loop {
+            i += 1;
+            if self.push_button_once()? {
+                return Ok(i);
+            }
+        }
+    }
+
+    pub fn reset(&mut self) {
+        for module in self.modules.values_mut() {
+            module.reset();
+        }
+    }
+      
+    pub fn push_button_once(&mut self) -> Result<bool> {
         self.messages.push_back(Packet { from: ModuleId("button"), to: BROADCASTER, pulse: Pulse::Low});
         while let Some(packet) = self.messages.pop_front() {
+            if packet.to == ModuleId("rx") && matches!(packet.pulse, Pulse::Low) {
+                return Ok(true);
+            }
+            
             match packet.pulse {
                 Pulse::Low => { self.low_pulses += 1;}
                 Pulse::High => { self.high_pulses += 1;}
@@ -105,7 +141,7 @@ impl<'a> Network<'a> {
             }
 
         }
-        Ok(())
+        Ok(false)
     }
 
     pub fn parse(text: &'a str) -> Result<Self> {
@@ -166,8 +202,10 @@ impl<'a> Network<'a> {
 fn main() -> Result<()> {
     let input = include_str!("input.txt");
     let mut network = Network::parse(input)?;
-    network.push_button(1000)?;
 
-    println!("Part 1: {}", network.low_pulses * network.high_pulses);
+    println!("Part 1: {}", network.part1()?);
+    network.reset();
+    println!("Part 2: {}", network.part2()?);
+
     Ok(())
 }
