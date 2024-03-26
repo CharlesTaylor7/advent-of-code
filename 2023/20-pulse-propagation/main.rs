@@ -292,38 +292,15 @@ impl<'a> Network<'a> {
             self.sliced(ModuleId("bn"), ModuleId("vz")),
         ];
 
-        // just look at the first one for now
         let mut answer = 1;
         for network in networks {
             let mut engine = NetworkEngine::new(network);
             for i in 1..10_000 {
                 if engine.push_button()? {
-                    println!("{}", i);
                     answer = lcm(answer, i);
                     break;
                 }
             }
-            /*
-            let mut bit = 1;
-            let mut binary = 0_usize;
-            let mut node_id = network.initial;
-            while let Some(slice) = &network.cables.get(&node_id) {
-                if slice.len() > 2 {
-                    bail!("too many children");
-                }
-                if slice.len() == 2 {
-                    binary += bit;
-                }
-                if let Some(id) = slice.iter().find(|id| **id != network.terminal) {
-                    node_id = *id;
-                    bit <<= 1;
-                } else {
-                    break;
-                }
-            }
-            product *= binary;
-            println!("{}", binary);
-            */
         }
         Ok(answer)
     }
