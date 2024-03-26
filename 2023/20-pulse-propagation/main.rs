@@ -9,6 +9,7 @@ use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::process::Command;
+use std::rc::Rc;
 
 const BROADCASTER: ModuleId = ModuleId("broadcaster");
 
@@ -67,7 +68,7 @@ type Pulses<'a> = HashMap<(ModuleId<'a>, ModuleId<'a>), Pulse>;
 pub struct Network<'a> {
     pub initial: ModuleId<'a>,
     pub modules: HashMap<ModuleId<'a>, Module<'a>>,
-    pub cables: HashMap<ModuleId<'a>, Vec<ModuleId<'a>>>,
+    pub cables: HashMap<ModuleId<'a>, Rc<[ModuleId<'a>]>>,
 }
 
 #[derive(Debug)]
@@ -151,7 +152,13 @@ impl<'a> NetworkEngine<'a> {
                             Switch::Off => Pulse::Low,
                         };
 
-                        for id in self.network.cables.get(&packet.to).into_iter().flatten() {
+                        for id in self
+                            .network
+                            .cables
+                            .get(&packet.to)
+                            .into_iter()
+                            .flat_map(|o| o.into_iter())
+                        {
                             self.messages.push_back(Packet {
                                 from: packet.to,
                                 to: *id,
@@ -169,7 +176,13 @@ impl<'a> NetworkEngine<'a> {
                         Pulse::High
                     };
 
-                    for id in self.network.cables.get(&packet.to).into_iter().flatten() {
+                    for id in self
+                        .network
+                        .cables
+                        .get(&packet.to)
+                        .into_iter()
+                        .flat_map(|o| o.into_iter())
+                    {
                         self.messages.push_back(Packet {
                             from: packet.to,
                             to: *id,
@@ -186,20 +199,20 @@ impl<'a> NetworkEngine<'a> {
 impl<'a> Network<'a> {
     pub fn part2(self) -> Result<usize> {
         let networks = [
-            self.clone().cut(ModuleId("ts"), ModuleId("sl")),
-            self.clone().cut(ModuleId("ls"), ModuleId("pq")),
-            self.clone().cut(ModuleId("fv"), ModuleId("rr")),
-            self.cut(ModuleId("bn"), ModuleId("jz")),
+            self.sliced(ModuleId("ts"), ModuleId("sl")),
+            self.sliced(ModuleId("ls"), ModuleId("pq")),
+            self.sliced(ModuleId("fv"), ModuleId("rr")),
+            self.sliced(ModuleId("bn"), ModuleId("jz")),
         ];
 
         // just look at the first one for now
         for network in networks.into_iter().take(1) {
             let mut pulses = HashMap::new();
             let mut engine = NetworkEngine::new(network);
-            for _i in 0..1000 {
+            for _i in 0..100 {
                 engine.push_button(Some(&mut pulses))?;
-                engine.network.dump_graphviz(&pulses)?;
             }
+            engine.network.dump_graphviz(&pulses)?;
         }
         Ok(42)
     }
@@ -210,15 +223,37 @@ impl<'a> Network<'a> {
         }
     }
 
-    pub fn cut(mut self, initial: ModuleId<'a>, terminal: ModuleId<'a>) -> Self {
-        self.initial = initial;
-        self.cables.remove(&terminal);
-        self
+    pub fn remove_key(&mut self, id: ModuleId<'a>) {
+        self.cables.remove(&id);
+        self.modules.remove(&id);
+    }
+
+    pub fn sliced(&self, initial: ModuleId<'a>, terminal: ModuleId<'a>) -> Self {
+        let mut modules = HashMap::new();
+        let mut cables = HashMap::new();
+        let mut to_visit = Vec::new();
+        to_visit.push(initial);
+        while let Some(id) = to_visit.pop() {
+            modules.insert(id, self.modules[&id].clone());
+            if id != terminal {
+                cables.insert(id, self.cables[&id].clone());
+                for cable in cables.get(&id).into_iter().flat_map(|c| c.into_iter()) {
+                    if !modules.contains_key(cable) {
+                        to_visit.push(*cable);
+                    }
+                }
+            }
+        }
+        Self {
+            initial,
+            modules,
+            cables,
+        }
     }
 
     pub fn parse(text: &'a str) -> Result<Self> {
         let mut modules = HashMap::new();
-        let mut cables = HashMap::new();
+        let mut cables: HashMap<ModuleId<'_>, Rc<[ModuleId<'_>]>> = HashMap::new();
 
         for line in text.lines() {
             let (id, module, rest): (ModuleId, Module, &str) = {
@@ -250,11 +285,12 @@ impl<'a> Network<'a> {
             modules.insert(id, module);
 
             let rest = rest.trim_start_matches([' ', '-', '>']);
-            cables.insert(id, rest.split(", ").map(|id| ModuleId(id)).collect());
+            let vector = rest.split(", ").map(|id| ModuleId(id)).collect::<Rc<_>>();
+            cables.insert(id, vector);
         }
 
         for (id, cables) in cables.iter() {
-            for cable in cables {
+            for cable in cables.iter() {
                 if let Some(Module::Conjunction { inputs }) = modules.get_mut(cable) {
                     inputs.insert(*id, Pulse::Low);
                 }
@@ -273,22 +309,11 @@ impl<'a> Network<'a> {
             .truncate(true)
             .write(true)
             .create(true)
-            .open(format!("graphviz/network-.dot"))?;
+            .open(format!("graphviz/network.dot"))?;
         let mut file = BufWriter::new(file);
 
         let indent = "";
         write!(&mut file, "strict digraph {{\n")?;
-        // min rank
-        write!(&mut file, "{indent: <2}subgraph {{\n")?;
-        write!(&mut file, "{indent: <4}rank=min;\n{indent: <4}")?;
-        write!(&mut file, "{}; ", BROADCASTER.0)?;
-        write!(&mut file, "\n{indent: <2}}}\n")?;
-
-        // max rank
-        write!(&mut file, "{indent: <2}subgraph {{\n")?;
-        write!(&mut file, "{indent: <4}rank=max;\n{indent: <4}")?;
-        write!(&mut file, "{}; ", "rx")?;
-        write!(&mut file, "\n{indent: <2}}}\n")?;
 
         // node labels
         for (id, module) in self.modules.iter() {
