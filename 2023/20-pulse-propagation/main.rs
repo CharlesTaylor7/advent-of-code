@@ -151,7 +151,7 @@ impl<'a> NetworkEngine<'a> {
                             Switch::Off => Pulse::Low,
                         };
 
-                        for id in self.network.cables[&packet.to].iter() {
+                        for id in self.network.cables.get(&packet.to).into_iter().flatten() {
                             self.messages.push_back(Packet {
                                 from: packet.to,
                                 to: *id,
@@ -169,7 +169,7 @@ impl<'a> NetworkEngine<'a> {
                         Pulse::High
                     };
 
-                    for id in self.network.cables[&packet.to].iter() {
+                    for id in self.network.cables.get(&packet.to).into_iter().flatten() {
                         self.messages.push_back(Packet {
                             from: packet.to,
                             to: *id,
@@ -192,7 +192,8 @@ impl<'a> Network<'a> {
             self.cut(ModuleId("bn"), ModuleId("jz")),
         ];
 
-        for network in networks {
+        // just look at the first one for now
+        for network in networks.into_iter().take(1) {
             let mut pulses = HashMap::new();
             let mut engine = NetworkEngine::new(network);
             for _i in 0..1000 {
