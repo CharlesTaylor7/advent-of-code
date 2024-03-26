@@ -278,17 +278,29 @@ impl<'a> Network<'a> {
         ];
 
         // just look at the first one for now
-        for network in networks.into_iter().take(1) {
-            let mut pulses = HashMap::new();
-            let mut engine = NetworkEngine::new(network);
-
-            engine.dump_graphviz(&pulses)?;
-            for _i in 0..100 {
-                engine.push_button(Some(&mut pulses))?;
-                engine.dump_graphviz(&pulses)?;
+        let mut product = 1;
+        for network in networks {
+            let mut bit = 1;
+            let mut binary = 0_usize;
+            let mut node_id = network.initial;
+            while let Some(slice) = &network.cables.get(&node_id) {
+                if slice.len() > 2 {
+                    bail!("too many children");
+                }
+                if slice.len() == 2 {
+                    binary += bit;
+                }
+                if let Some(id) = slice.iter().find(|id| **id != network.terminal) {
+                    node_id = *id;
+                    bit <<= 1;
+                } else {
+                    break;
+                }
             }
+            product *= binary;
+            println!("{}", binary);
         }
-        Ok(42)
+        Ok(product)
     }
 
     pub fn reset(&mut self) {
@@ -385,6 +397,7 @@ fn main() -> Result<()> {
     let input = include_str!("input.txt");
     let network = Network::parse(input)?;
     let mut engine = NetworkEngine::new(network);
+    //engine.dump_graphviz(&mut HashMap::new())?;
 
     println!("Part 1: {}", engine.part1()?);
 
