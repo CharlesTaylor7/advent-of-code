@@ -94,7 +94,7 @@ impl<'a> NetworkEngine<'a> {
 
     pub fn part1(&mut self) -> Result<usize> {
         for _ in 0..1000 {
-            self.push_button(None)?;
+            self.push_button()?;
         }
         Ok(self.low_pulses * self.high_pulses)
     }
@@ -106,7 +106,7 @@ impl<'a> NetworkEngine<'a> {
         self.messages.clear();
     }
 
-    pub fn push_button(&mut self, mut pulses: Option<&mut Pulses<'a>>) -> Result<()> {
+    pub fn push_button(&mut self) -> Result<bool> {
         self.push_count += 1;
         self.messages.push_back(Packet {
             from: ModuleId("button"),
@@ -115,9 +115,8 @@ impl<'a> NetworkEngine<'a> {
         });
 
         while let Some(packet) = self.messages.pop_front() {
-            if let Some(map) = pulses.take() {
-                map.insert((packet.from, packet.to), packet.pulse);
-                pulses = Some(map);
+            if packet.to == self.network.terminal && matches!(packet.pulse, Pulse::Low) {
+                return Ok(true);
             }
 
             match packet.pulse {
@@ -193,7 +192,7 @@ impl<'a> NetworkEngine<'a> {
                 }
             }
         }
-        Ok(())
+        Ok(false)
     }
 
     pub fn dump_graphviz(&self, pulses: &Pulses<'a>) -> Result<()> {
@@ -268,18 +267,43 @@ impl<'a> NetworkEngine<'a> {
     }
 }
 
+fn gcd(a: usize, b: usize) -> usize {
+    if a == 0 {
+        b
+    } else if b == 0 {
+        a
+    } else {
+        let max = std::cmp::max(a, b);
+        let min = std::cmp::min(a, b);
+        gcd(max % min, min)
+    }
+}
+
+fn lcm(a: usize, b: usize) -> usize {
+    a * b / gcd(a, b)
+}
+
 impl<'a> Network<'a> {
     pub fn part2(self) -> Result<usize> {
         let networks = [
-            self.sliced(ModuleId("ts"), ModuleId("sl")),
-            self.sliced(ModuleId("ls"), ModuleId("pq")),
-            self.sliced(ModuleId("fv"), ModuleId("rr")),
-            self.sliced(ModuleId("bn"), ModuleId("jz")),
+            self.sliced(ModuleId("ts"), ModuleId("bq")),
+            self.sliced(ModuleId("ls"), ModuleId("qh")),
+            self.sliced(ModuleId("fv"), ModuleId("lt")),
+            self.sliced(ModuleId("bn"), ModuleId("vz")),
         ];
 
         // just look at the first one for now
-        let mut product = 1;
+        let mut answer = 1;
         for network in networks {
+            let mut engine = NetworkEngine::new(network);
+            for i in 1..10_000 {
+                if engine.push_button()? {
+                    println!("{}", i);
+                    answer = lcm(answer, i);
+                    break;
+                }
+            }
+            /*
             let mut bit = 1;
             let mut binary = 0_usize;
             let mut node_id = network.initial;
@@ -299,8 +323,9 @@ impl<'a> Network<'a> {
             }
             product *= binary;
             println!("{}", binary);
+            */
         }
-        Ok(product)
+        Ok(answer)
     }
 
     pub fn reset(&mut self) {
