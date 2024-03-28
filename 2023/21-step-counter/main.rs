@@ -14,7 +14,6 @@ use anyhow::{anyhow, bail, Result};
 use std::ascii::Char;
 
 
-
 fn main() -> Result<()> {
     println!("Part 1: {}", part1()?);
     println!("Part 2: {}", part2()?);
