@@ -2,11 +2,19 @@ from dataclasses import dataclass
 
 
 def main():
-    with open('./2023/21-step-counter/example.txt', 'r') as f:
-        garden: list[str] = f.readlines()
+    # Since there are only two types of tiles, we can save space by just
+    # recording all the rock locations as a set
+    rocks: set[int] = set()
+    start: int
 
-    pass
-    
-    
+    with open("./2023/21-step-counter/example.txt", "r") as f:
+        for y, line in enumerate(f.readlines()):
+            width = len(line)
+            for x, char in enumerate(line):
+                if char == "#":
+                    rocks.add(x + y * width)
+                elif char == "S":
+                    start = x + y * width
+
 
 main()
