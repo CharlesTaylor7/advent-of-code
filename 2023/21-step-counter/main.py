@@ -1,29 +1,37 @@
-from typing import Tuple
-from dataclasses import dataclass, field
+from typing import Self, Tuple, TypeAlias, cast, Optional
+from dataclasses import dataclass
 
+Point: TypeAlias = Tuple[int, int]
+
+
+def cast_not_none[T](value: Optional[T]) -> T:
+    return cast(T, value)
 
 # Since there are only two types of tiles, we can save space by just
 # recording all the rock locations as a set
 @dataclass
 class Garden:
-    start: Tuple[int, int] = (0, 0)
-    rocks: set[Tuple[int, int]] = field(default_factory=set)
-    width: int = 0
-    height: int = 0
+    start: Tuple[int, int]
+    rocks: set[Tuple[int, int]]
+    width: int
+    height: int
 
-    def parse(self, file_path: str) -> "Garden":
+    @classmethod
+    def parse(cls, file_path: str) -> 'Garden':
+        rocks = set()
+        start = None
         with open(file_path, "r") as file:
             for y, line in enumerate(file.readlines()):
                 for x, char in enumerate(line):
                     if char == "#":
-                        self.rocks.add((x, y))
+                        rocks.add((x, y))
                     elif char == "S":
-                        self.start = (x, y)
+                        start = (x, y)
 
-        self.width = x + 1  # pyright: ignore
-        self.height = y + 1  # pyright: ignore
-
-        return self
+        width = x + 1  # pyright: ignore
+        height = y + 1  # pyright: ignore
+        start = cast_not_none(start)
+        return Garden(start=start, rocks=rocks, height=height, width=width)
 
     def solve(self, step_count: int) -> int:
         visited = {self.start}
@@ -52,7 +60,7 @@ class Garden:
 
 
 def main(file: str, step_count: int) -> int:
-    return Garden().parse(file).solve(step_count)
+    return Garden.parse(file).solve(step_count)
 
 
 assert main("./2023/21-step-counter/example.txt", 6) == 16
