@@ -1,11 +1,8 @@
-from typing import Self, Tuple, TypeAlias, cast, Optional
+from typing import Tuple, TypeAlias
 from dataclasses import dataclass
 
 Point: TypeAlias = Tuple[int, int]
 
-
-def cast_not_none[T](value: Optional[T]) -> T:
-    return cast(T, value)
 
 # Since there are only two types of tiles, we can save space by just
 # recording all the rock locations as a set
@@ -17,9 +14,11 @@ class Garden:
     height: int
 
     @classmethod
-    def parse(cls, file_path: str) -> 'Garden':
+    def parse(cls, file_path: str) -> "Garden":
         rocks = set()
         start = None
+        x = 0
+        y = 0
         with open(file_path, "r") as file:
             for y, line in enumerate(file.readlines()):
                 for x, char in enumerate(line):
@@ -28,9 +27,10 @@ class Garden:
                     elif char == "S":
                         start = (x, y)
 
-        width = x + 1  # pyright: ignore
-        height = y + 1  # pyright: ignore
-        start = cast_not_none(start)
+        width = x + 1
+        height = y + 1
+
+        assert start is not None
         return Garden(start=start, rocks=rocks, height=height, width=width)
 
     def solve(self, step_count: int) -> int:
