@@ -125,7 +125,7 @@ class Garden:
         self.wave = [self.start]
         self.visited = {self.start}
         for step in range(step_count):
-            # self.print(step)
+            self.print(step)
             next = []
             for point in self.neighbors():
                 normalized = (point[0] % self.width, point[1] % self.height)
@@ -179,10 +179,7 @@ def test_part2_large():
 
 
 def main():
-    # print(run("./2023/21-step-counter/input.txt", "part-2", 26501365))
-
-    print(run("./2023/21-step-counter/example.txt", "part-2", 5000))
-    # print(run("./2023/21-step-counter/example.txt", "part-2", 10))
+    print(run("./2023/21-step-counter/input.txt", "part-2", 26501365))
 
 
 if __name__ == "__main__":
