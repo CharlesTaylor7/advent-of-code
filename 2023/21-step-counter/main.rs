@@ -9,17 +9,18 @@
 //! [dependencies]
 //! anyhow = "*"
 //! ```
-use std::{rc::Rc, collections::{HashMap, HashSet}};
 use anyhow::{anyhow, bail, Result};
 use std::ascii::Char;
-
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 fn main() -> Result<()> {
     println!("Part 1: {}", part1()?);
     println!("Part 2: {}", part2()?);
     Ok(())
 }
-
 
 fn part2() -> Result<usize> {
     let input = include_str!("input.txt");
@@ -37,7 +38,7 @@ fn part2() -> Result<usize> {
         for value in visited.iter() {
             let col = value % (width + 1);
             let row = value / (width + 1);
-            if col == 0 || col == width || row == 0 || row == height -1 {
+            if col == 0 || col == width || row == 0 || row == height - 1 {
                 println!("i: {i}, col: {col}, row: {row}");
                 break 'outer;
             }

@@ -12,6 +12,7 @@ use anyhow::{anyhow, bail, Result};
 use std::{
     any,
     borrow::{Borrow, BorrowMut},
+    cmp,
     collections::{HashMap, HashSet},
     rc::Rc,
 };
@@ -62,7 +63,7 @@ impl Brick {
             _ => bail!("not an axis"),
         };
         Ok(Self {
-            id: BrickId(id),
+            id: BrickId(char::from_u32((id + 65) as u32).ok_or(anyhow!("not a valid ascii char"))?),
             axis,
             start: a,
             len,
@@ -102,12 +103,13 @@ impl<'a> Iterator for BrickPoints<'a> {
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub struct BrickId(usize);
+pub struct BrickId(pub char);
 
 #[derive(Debug, Clone)]
 pub struct Arena {
     pub bricks: Vec<Brick>,
-    pub grid: HashMap<Point, Option<BrickId>>,
+    pub grid: HashMap<Point, BrickId>,
+    pub max: Point,
 }
 
 impl Arena {
@@ -118,15 +120,58 @@ impl Arena {
             .map(|(i, line)| Brick::parse(i, line))
             .collect::<Result<Vec<_>>>()?;
 
-        let mut grid: HashMap<Point, Option<BrickId>> = HashMap::new();
+        let mut grid: HashMap<Point, BrickId> = HashMap::new();
 
+        let mut max = Point { x: 0, y: 0, z: 0 };
         for brick in bricks.iter() {
             for point in brick.points() {
-                grid.insert(point, Some(brick.id));
+                max.x = cmp::max(max.x, point.x);
+                max.y = cmp::max(max.y, point.y);
+                max.z = cmp::max(max.z, point.z);
+                grid.insert(point, brick.id);
             }
         }
 
-        Ok(Self { bricks, grid })
+        Ok(Self { bricks, grid, max })
+    }
+
+    pub fn print_projection_xy(&self) {
+        print!("\nxy projection\n");
+        for y in 0..(self.max.y + 1) {
+            for x in 0..(self.max.x + 1) {
+                let brick = (0..(self.max.z + 1))
+                    .rev()
+                    .find_map(|z| self.grid.get(&Point { x, y, z }));
+
+                print!("{}", brick.map_or('.', |id| id.0));
+            }
+            print!("\n")
+        }
+        print!("\n")
+    }
+
+    pub fn print_projection_xz(&self) {
+        print!("\nxz projection\n");
+        for z in 1..(self.max.z + 1) {
+            for x in 0..(self.max.x + 1) {
+                let brick = (0..(self.max.y + 1)).find_map(|y| self.grid.get(&Point { x, y, z }));
+
+                print!("{}", brick.map_or('.', |id| id.0));
+            }
+            print!("\n")
+        }
+    }
+
+    pub fn print_projection_yz(&self) {
+        print!("\nyz projection\n");
+        for z in 1..(self.max.z + 1) {
+            for y in 0..(self.max.y + 1) {
+                let brick = (0..(self.max.x + 1)).find_map(|x| self.grid.get(&Point { x, y, z }));
+
+                print!("{}", brick.map_or('.', |id| id.0));
+            }
+            print!("\n")
+        }
     }
 
     pub fn settle(&mut self) -> bool {
@@ -147,7 +192,7 @@ impl Arena {
                         let mut start = brick.start.clone();
                         start.z -= 1;
 
-                        self.grid.get(&start).and_then(|v| v.as_ref())
+                        self.grid.get(&start)
                     }
                     Axis::X | Axis::Y => brick
                         .points()
@@ -155,7 +200,7 @@ impl Arena {
                             p.z -= 1;
                             p
                         })
-                        .find_map(|p| self.grid.get(&p).and_then(|v| v.as_ref())),
+                        .find_map(|p| self.grid.get(&p)),
                 };
                 if is_grounded {
                     println!("grounded");
@@ -175,7 +220,7 @@ impl Arena {
                 brick.start.z -= 1;
 
                 for p in brick.points() {
-                    self.grid.insert(p, Some(brick.id));
+                    self.grid.insert(p, brick.id);
                 }
             }
         }
@@ -207,6 +252,9 @@ fn main() -> Result<()> {
     println!("Input:\n{input}");
     println!("initial");
     arena.settle();
-    println!("Part 1: {}", arena.part1());
+    arena.print_projection_xy();
+    arena.print_projection_yz();
+    arena.print_projection_xz();
+    //println!("Part 1: {}", arena.part1());
     Ok(())
 }
