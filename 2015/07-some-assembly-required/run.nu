@@ -38,6 +38,21 @@ def part1 [] {
 }
 
 def part2 [] {
+  let wires = split row "\n" | each { parse-expr $in }
+  let seed = { vars: { b: 956 } wires: $wires }
+  # let limit = 1
+  let limit = 1_000
+  seq 1 $limit 
+  | reduce --fold $seed { |_ acc| 
+    let seed = { vars: $acc.vars wires: [] }
+    $acc.wires | reduce --fold $seed { |wire acc|
+      match (try-eval --part2 $acc.vars $wire) {
+        [true $vars] =>  { vars: $vars wires: $acc.wires }
+        [false $_] => { vars: $acc.vars wires: ($acc.wires | append $wire) }
+      }
+    }
+  }
+  | get vars.a
 
 }
 
@@ -102,14 +117,16 @@ def args [op?: string] {
   }
 }
 
-def try-eval [vars: record expr: record] -> [bool, record] {
+def try-eval [vars: record expr: record --part2] -> [bool, record] {
+  if $part2 and $expr.r == "b" { return [true $vars] }
+
   let x = try-read $vars $expr.x
   if $x == null { return [false, $vars] }
   let y = try-read $vars $expr.y
   if $y == null and (args $expr.op) == 2 { return [false, $vars] }
   let result = interpret $expr.op $x $y
-  let record = $vars | insert $expr.r $result
-  [true $record]
+  let vars = $vars | insert $expr.r $result
+  [true $vars]
 }
 
 def try-read [vars: record val: any] -> any {
