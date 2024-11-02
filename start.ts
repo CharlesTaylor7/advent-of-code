@@ -1,5 +1,4 @@
 #!/usr/bin/env node -r ts-node/register --env-file=.env
-
 import fs from "node:fs/promises";
 import HtmlParser from "node-html-parser";
 
