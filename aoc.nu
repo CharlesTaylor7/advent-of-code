@@ -1,4 +1,4 @@
-export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" template: string@"nu-complete-template"] {
+export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" template?: string@"nu-complete-template"] {
   let page = http get $"https://adventofcode.com/($year)/day/($day)" 
 
   let title = $page
@@ -22,8 +22,10 @@ export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" templa
   http get $"https://adventofcode.com/($year)/day/($day)/input" --headers [Cookie (cookie)]
   | save -f $"($dir)/input.txt"
 
-  let template = $"templates/($template)/*" | into glob
-  cp $template $dir
+  if $template != null {
+    let template = $"templates/($template)/*" | into glob
+    cp $template $dir
+  }
 }
 
 export def answer [year: int@"nu-complete-year" day: int@"nu-complete-day" level: int@"nu-complete-level" answer: int] {
