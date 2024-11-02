@@ -17,10 +17,10 @@ export def start [year: int@"nu-complete-year" day: int@"nu-complete-day"] {
 
   let description = $page
   | query web -q "article.day-desc" -m
-  | save $"($dir)/description.txt"
+  | save -f $"($dir)/description.txt"
 
   http get $"https://adventofcode.com/($year)/day/($day)/input" --headers [Cookie (cookie)]
-  | save $"($dir)/input.txt"
+  | save -f $"($dir)/input.txt"
 }
 
 export def answer [year: int@"nu-complete-year" day: int@"nu-complete-day" level: int@"nu-complete-level" answer: int] {
