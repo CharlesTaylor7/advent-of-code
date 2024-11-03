@@ -23,12 +23,12 @@ export def capture [] {
 }
 
 # between 752 and 4941
-def part1 [] {
-  split row "\n"
+export def part1 [] {
+  let chars = $in
   | parse --regex '\\(?<c>[\\x"])' 
   | get c
   | each { |x|
-    match $x {
+    let result = match $x {
       'x' => { 3 } 
       '\' => { 1 }
       '"' => { 1 }
@@ -37,12 +37,27 @@ def part1 [] {
         0
       }
     }
+    $result
   }
   | math sum
-  | $in + 2
 
+  let lines = $in | split row "\n" | length
+
+  2 * $lines + $chars
 }
 
 def part2 [] {
+  split row "\n"
+  | each { |line| ($line | to nuon | str length) - ($line | str length) }
+  | math sum
 }
+
+[
+  '""'
+  '"abc"'
+  '"aaa\"aaa"'
+  '"\x27"'
+]
+| part1
+| print
 
