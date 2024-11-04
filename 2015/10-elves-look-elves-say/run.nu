@@ -18,12 +18,19 @@ export def main [part: int@"nu-complete-part"] {
 }
 
 def part1 [] {
-  seq 1 40
-  | reduce --fold $in { |_ acc| $acc | see-say }
-  | str length
+  repeat 40 | str length
 }
 
+# https://www.youtube.com/watch?v=ea7lJkEhytA
+# 92 elements...
 def part2 [] {
+  repeat 50 | str length
+}
+
+export def repeat [n: int] {
+  let seed = $in
+  seq 1 $n
+  | reduce --fold $seed { |_ acc| ($acc | see-say) }
 }
 
 export def see-say [] {
