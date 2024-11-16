@@ -8,7 +8,7 @@ export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" templa
   | parse --regex '^--- Day \d+: (?<title>.*?) ---$'
   | get title
   | first
-  | split row '[ ,]'
+  | split row --regex '[ ,]+'
   | str downcase
   | str join "-"
 
