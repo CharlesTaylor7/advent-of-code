@@ -32,7 +32,9 @@ impl std::fmt::Debug for Digit {
     }
 }
 fn main() -> Result<()> {
-    run(2);
+    let (cache, elements) = run(2);
+    println!("{elements:#?}");
+
     let input = include_str!("input.txt");
 
     //    println!("Input:\n{input}");
@@ -52,7 +54,6 @@ fn run(safety: usize) -> (Cache, AtomicElements) {
     let mut current: Seq = seed;
 
     while count < safety && elements.len() < 94 {
-        println!("{cache:#?}");
         count += 1;
 
         // check all non-trivial splits
