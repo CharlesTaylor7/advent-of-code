@@ -51,5 +51,4 @@ export def see-say [] {
         $"($str)($count)($item)"
       }
   }
-  | tee { print $in }
 }
