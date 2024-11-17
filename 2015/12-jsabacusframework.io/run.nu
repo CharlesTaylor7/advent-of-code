@@ -17,9 +17,40 @@ export def main [part: int@"nu-complete-part"] {
   }
 }
 
-def part1 [] {
+export def part1 [] {
+  from json | sum 1
 }
 
-def part2 [] {
+export def part2 [] {
+  from json | sum 2
+}
+
+
+export def sum [part: int]: any -> int {
+  let val = $in
+  match ($val | get-type) {
+    'int' => { $val }
+    'string' => { 0 }
+    'record' => { $val | sum-record $part }
+    'list' | 'table' => { $val | sum-list $part }
+    $t => { print $t}
+  }
+}
+
+export def get-type []: any -> string {
+  describe | split row '<' | first
+}
+
+export def sum-record [part: int]: record -> int {
+  let vals = transpose key val | get val 
+  if $part == 2 and ($vals | any { $in == "red" }) {
+    0
+  } else {
+    $vals | sum-list $part
+  }
+}
+
+export def sum-list [part: int]: list -> int {
+  each { sum $part } | math sum
 }
 

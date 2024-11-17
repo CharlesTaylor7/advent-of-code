@@ -20,7 +20,6 @@ export def main [part: int@"nu-complete-part"] {
 def part1 [] {
   mut p = $in | str trim
   loop {
-    # print $p
     $p = $p | inc
     if ($p | valid-rule-1) and ($p | valid-rule-2) and ($p | valid-rule-3) { break }
   }
