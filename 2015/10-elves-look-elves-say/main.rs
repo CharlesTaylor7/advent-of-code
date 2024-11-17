@@ -10,7 +10,7 @@ use std::{
     rc::Rc,
 };
 
-type Seq = Rc<[Digit]>;
+type Seq = (Rc<[Digit]>);
 type Cache = HashMap<Seq, Seq>;
 type AtomicElements = HashSet<Seq>;
 
@@ -21,18 +21,29 @@ enum Digit {
     Two,
     Three,
 }
+
 impl std::fmt::Debug for Digit {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let num = match self {
-            Digit::One => 1,
-            Digit::Two => 2,
-            Digit::Three => 3,
-        };
-        write!(f, "{}", num)
+        write!(f, "{}", digit_to_int(*self))
     }
 }
+//
+// impl std::fmt::Debug for Seq {
+//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+//         let result = self
+//
+//             .iter()
+//             .copied()
+//             .map(digit_to_int)
+//             .map(|i| i.to_string())
+//             .collect::<String>();
+//         write!(f, "{}", result)
+//     }
+// }
+
 fn main() -> Result<()> {
-    let (cache, elements) = run(2);
+    let (cache, elements) = run(5);
+    println!("{cache:#?}");
     println!("{elements:#?}");
 
     let input = include_str!("input.txt");
@@ -56,19 +67,20 @@ fn run(safety: usize) -> (Cache, AtomicElements) {
     while count < safety && elements.len() < 94 {
         count += 1;
 
+        let result = look_and_say_with(&mut cache, current.clone());
         // check all non-trivial splits
-        let whole = look_and_say_with(&mut cache, current.clone());
         for i in 1..(current.len()) {
             let (left, right) = current.split_at(i);
 
-            let mut together = look_and_say_with(&mut cache, Seq::from(left)).to_vec();
-            together.extend_from_slice(&look_and_say_with(&mut cache, Seq::from(right)));
+            let mut combined = look_and_say_with(&mut cache, Seq::from(left)).to_vec();
+            combined.extend_from_slice(&look_and_say_with(&mut cache, Seq::from(right)));
 
-            if together.iter().zip(whole.iter()).all(|(a, b)| a == b) {
-                elements.insert(Seq::from(left));
+            if combined.iter().zip(result.iter()).all(|(a, b)| a == b) {
+                // elements.insert(Seq::from(left));
                 elements.insert(Seq::from(right));
             }
         }
+        current = result;
     }
 
     (cache, elements)
@@ -97,6 +109,10 @@ fn look_and_say(input: Seq) -> Seq {
             item = Some(c);
         }
     }
+    if let Some(item) = item {
+        result.push(int_to_digit(count));
+        result.push(item);
+    }
     Seq::from(result)
 }
 
@@ -109,11 +125,32 @@ fn char_to_digit(c: char) -> Digit {
     }
 }
 
+fn digit_to_int(digit: Digit) -> u8 {
+    match digit {
+        Digit::One => 1,
+        Digit::Two => 2,
+        Digit::Three => 3,
+    }
+}
+
 fn int_to_digit(num: u8) -> Digit {
     match num {
         1 => Digit::One,
         2 => Digit::Two,
         3 => Digit::Three,
         _ => panic!("unexpected: {num}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn look_and_say_test() {
+        assert_eq!(
+            look_and_say([Digit::One].into()),
+            [Digit::One, Digit::One].into()
+        );
     }
 }
