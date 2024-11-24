@@ -1,9 +1,8 @@
-def dir [] {
-  $env.CURRENT_FILE | path dirname
-} 
-
-def input [] {
-  open (dir | path join "input.txt")
+export def input [] {
+  $env.CURRENT_FILE 
+  | path dirname
+  | path join "input.txt"
+  | open $in
 }
 
 def nu-complete-part [] {
@@ -11,15 +10,16 @@ def nu-complete-part [] {
 }
 
 export def main [part: int@"nu-complete-part"] {
-  match $part {
-    1 => (input | part1)
-    2 => (input | part2)
+  input 
+  | match $part {
+    1 => part1
+    2 => part2
   }
 }
 
 def part1 [] {
+  parse -r '\w+: capacity (?<capacity>-?\d+), durability (?<durability>-?\d+), flavor (?<flavor>-?\d+), texture (?<texture>-?\d+), calories (?<calories>-?\d+)'
 }
 
 def part2 [] {
 }
-

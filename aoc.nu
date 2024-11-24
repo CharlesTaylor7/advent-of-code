@@ -24,7 +24,7 @@ export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" templa
 
   if $template != null {
     let template = $"templates/($template)/*" | into glob
-    cp $template $dir
+    cp -r $template $dir
   }
 }
 
