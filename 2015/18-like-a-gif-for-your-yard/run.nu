@@ -67,6 +67,7 @@ export def live-neighbors [n: int, i: int, j: int] {
       }
       | flatten
       | str join ', '
+  put neighbors
 
   let keys = []
   stor open 
