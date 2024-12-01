@@ -20,8 +20,8 @@ export def main [part: int@"nu-complete-part"] {
 
 export def part1 [] {
   stor reset
-  stor create -t conway -c { i: int, j: int, n: int, s: str }
-  stor open | query db "create unique index lookup on conway(n,j,i)"
+  stor create -t conway -c { n: int, key: str }
+  stor open | query db "create unique index lights on conway(n, key)"
 
   $in 
   | split row "\n"
@@ -32,9 +32,10 @@ export def part1 [] {
     | split chars
     | enumerate 
     | each {
-      let i = $in.index
       let s = $in.item
-      stor insert -t conway -d { i: $i, j: $j, n: 0, s: $s }
+      if $s != "#" { return }
+      let i = $in.index
+      stor insert -t conway -d { key: (key $i $j), n: 0 }
     }
   }
 
@@ -42,7 +43,7 @@ export def part1 [] {
     conway $i
   }
 
-  stor open | query db $"select COUNT\(s\) as count from conway where n = 100 and s = '#'" | first | get count
+  stor open | query db $"select COUNT\(*\) as count from conway where n = 100" | first | get count
 }
 
   # print "seed"
@@ -55,12 +56,28 @@ export def part1 [] {
   # | transpose 
   # | get column1
 
-# export def live-neighbors [n: int, j: int, i: int] {
-# }
+export def live-neighbors [n: int, i: int, j: int] {
+  let neighbors = seq -1 1 
+      | each { |k| 
+        seq -1 1 
+        | each { |l| 
+          if $k == 0 and $l == 0 { return }
+          key ($i - $k) ($j - $l)
+        } 
+      }
+      | flatten
+      | str join ', '
 
-export def is-live [n: int, j: int, i: int] {
+  let keys = []
   stor open 
-  | query db $"select s from conway where n = ($n) and j = ($j) and i = ($i) and s = '#'"
+  | query db $"select COUNT\(*\) as count from conway where n = ($n) and key in \(($neighbors)\)"
+  | first
+  | get count
+}
+
+export def is-live [n: int, i: int, j: int] {
+  stor open 
+  | query db $"select 1 from conway where n = ($n) and key = (key $i $j)"
   | is-not-empty
 }
 
@@ -70,27 +87,15 @@ export def conway [n: int] {
   | each { |i|
     seq 0 99 
     | each { |j|
-      let neighbors = seq -1 1 
-      | each { |k| 
-        seq -1 1 
-        | each { |l| 
-          if $k == 0 and $l == 0 { return 0 }
-          if (is-live ($n - 1) ($j - $l) ($i - $k)) { 1 } else { 0 }
-        } 
+      let k = live-neighbors ($n - 1) $i $j
+      let live = match (is-live ($n - 1) $i $j) {
+        true if $k >= 2 and $n <= 3 => { true }
+        false if $k == 3 => { true }
+        _ => { false }
       }
-      | flatten
-      | math sum
-      let s = match (is-live ($n - 1) $j $i) {
-        true if $neighbors >= 2 and $n <= 3 => { "#" }
-        false if $neighbors == 3 => { "#" }
-        _ => { "." }
-      }
-      stor insert -t conway -d {
-        n: $n,
-        j: $j,
-        i: $i,
-        s: $s
-      }
+      if not $live { return }
+
+      stor insert -t conway -d { n: $n, key: (key $i $j) }
     }
     | ignore
   }
@@ -110,9 +115,9 @@ def show [graph: record]: nothing -> string {
 }
 
 def key [i: int, j: int]: nothing -> string {
+  if $i < 0 or $j < 0 or $i > 99 or $j > 99 { return }
   $"($i)-($j)"
 }
 
 def part2 [] {
 }
-
