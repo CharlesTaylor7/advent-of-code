@@ -6,17 +6,11 @@ def input [] {
   open (dir | path join "input.txt")
 }
 
-def nu-complete-part [] {
-  [1 2]
+
+export def main [] {
+  input | run 
 }
 
-export def main [part: int@"nu-complete-part"] {
-  input 
-  | match $part {
-    1 => (part1)
-    2 => (part2)
-  }
-}
 # const rows = 6
 # const cols = 6
 # const steps = 4
@@ -24,7 +18,7 @@ const rows = 100
 const cols = 100
 const steps = 100
 
-export def part1 [] {
+export def run [] {
   stor reset
   stor create -t conway -c { n: int, key: str }
   stor open | query db "create unique index lights on conway(n, key)"
@@ -39,9 +33,10 @@ export def part1 [] {
     | enumerate 
     | each {
       let s = $in.item
-      if $s != "#" { return }
       let i = $in.index
-      stor insert -t conway -d { key: (key $i $j), n: 0 }
+      if $s == "#" or (is-corner $i $j) { 
+        stor insert -t conway -d { key: (key $i $j), n: 0 }
+      }
     }
   }
 
@@ -55,6 +50,9 @@ export def part1 [] {
   stor open | query db $"select COUNT\(*\) as count from conway where n = ($steps)" | first | get count
 }
 
+export def is-corner [ i: int, j: int] {
+ $i in [0, 99] and $j in [0, 99] 
+}
 
 export def live-neighbors [n: int, i: int, j: int] {
   let neighbors = seq -1 1 
@@ -94,9 +92,9 @@ export def conway [n: int] {
         false if $k == 3 => { true }
         _ => { false }
       }
-      if not $live { return }
-
-      stor insert -t conway -d { n: $n, key: (key $i $j) }
+      if (is-corner $i $j) or $live { 
+        stor insert -t conway -d { n: $n, key: (key $i $j) }
+      }
     }
     | ignore
   }
