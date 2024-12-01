@@ -33,10 +33,10 @@ def part1 [] {
   }
   | flatten
   | into record
-  print $map
-  conway $map
-  # seq 1 100
-  # | reduce --fold $map { |_ acc| conway ($acc | tee { print $in }) }
+  seq 1 100
+  | reduce --fold $map { |_ acc| conway $acc }
+  | transpose 
+  | get column1
 }
 
 def conway [record]: nothing -> record {
@@ -54,14 +54,17 @@ def conway [record]: nothing -> record {
       }
       | flatten
       | math sum
-      print [(key $i $j) $n]
+      let key = key $i $j
+      let symbol = match ($record | get $key) {
+        "#" if $n >= 2 and $n <= 3 => { "#" }
+        "." if $n == 3 => { "#" }
+        _ => { "." }
+      }
+      [$key  $symbol]
     }
   }
-  | ignore 
-
-  {}
-  # | flatten
-  # | into record
+  | flatten
+  | into record
 }
 
 def key [i: int, j: int]: nothing -> string {
