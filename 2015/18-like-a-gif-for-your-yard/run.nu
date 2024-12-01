@@ -11,14 +11,19 @@ def nu-complete-part [] {
 }
 
 export def main [part: int@"nu-complete-part"] {
-  match $part {
-    1 => (input | part1)
-    2 => (input | part2)
+  input 
+  | match $part {
+    1 => (part1)
+    2 => (part2)
   }
 }
 
-def part1 [] {
-  let map = $in 
+export def part1 [] {
+  stor reset
+  stor create -t conway -c { i: int, j: int, n: int, s: str }
+  stor open | query db "create unique index lookup on conway(n,j,i)"
+
+  $in 
   | split row "\n"
   | enumerate
   | each { 
@@ -28,49 +33,68 @@ def part1 [] {
     | enumerate 
     | each {
       let i = $in.index
-      [(key $i $j) $in.item]
+      let s = $in.item
+      stor insert -t conway -d { i: $i, j: $j, n: 0, s: $s }
     }
   }
-  | flatten
-  | into record
-  print "seed"
-  print (show ($map))
-  print "step 1"
-  print (show (conway $map))
+
+  for i in (seq 1 100) {
+    conway $i
+  }
+
+  stor open | query db $"select COUNT\(s\) as count from conway where n = 100 and s = '#'" | first | get count
+}
+
+  # print "seed"
+  # print (show ($map))
+  # print "step 1"
+  # print (show (conway $map))
 
   # seq 1 100
   # | reduce --fold $map { |_ acc| conway $acc }
   # | transpose 
   # | get column1
+
+# export def live-neighbors [n: int, j: int, i: int] {
+# }
+
+export def is-live [n: int, j: int, i: int] {
+  stor open 
+  | query db $"select s from conway where n = ($n) and j = ($j) and i = ($i) and s = '#'"
+  | is-not-empty
 }
 
-def conway [record]: nothing -> record {
+# writes the nth grid to sqlite based on the n-1 grid
+export def conway [n: int] {
   seq 0 99
   | each { |i|
     seq 0 99 
     | each { |j|
-      let n = seq -1 1 
+      let neighbors = seq -1 1 
       | each { |k| 
         seq -1 1 
         | each { |l| 
           if $k == 0 and $l == 0 { return 0 }
-          let result = $record | get -i (key ($i - $k) ($j - $l))
-          if $result == "#" { 1 } else { 0 }
+          if (is-live ($n - 1) ($j - $l) ($i - $k)) { 1 } else { 0 }
         } 
       }
       | flatten
       | math sum
-      let key = key $i $j
-      let symbol = match ($record | get $key) {
-        "#" if $n >= 2 and $n <= 3 => { "#" }
-        "." if $n == 3 => { "#" }
+      let s = match (is-live ($n - 1) $j $i) {
+        true if $neighbors >= 2 and $n <= 3 => { "#" }
+        false if $neighbors == 3 => { "#" }
         _ => { "." }
       }
-      [$key  $symbol]
+      stor insert -t conway -d {
+        n: $n,
+        j: $j,
+        i: $i,
+        s: $s
+      }
     }
+    | ignore
   }
-  | flatten
-  | into record
+  | ignore
 }
 
 def show [graph: record]: nothing -> string {

@@ -6,29 +6,23 @@ def input [] {
   open (dir | path join "input.txt")
 }
 
-export def main [] {
-  input | run
-}
-
 def parse-buckets [] {
   split row "\n" | each { try { into int } }
 }
 
+def main [] {
+  let buckets = [ 5, 5, 10, 15, 20 ]
+  count $buckets 25
 
-def run [] {
-  # let buckets = [ 5, 5, 10, 15, 20 ]
-  # count $buckets 25
-  parse-buckets | count $in 150
+  input | parse-buckets | count $in 150
 }
 
 def count [buckets: list<int>, eggnog: int] {
-  
-  try { stor delete -t eggnog }
+  stor reset
   stor create -t eggnog -c { i: int, q: int, c: int, n: int }
   stor open | query db "create index cache on eggnog(i, q, c)"
 
   let n = ($buckets | length) - 1
-  # go $buckets $n $eggnog 2
 
   for q in (seq 1 $eggnog) {
     for c in (seq 1 $q) {
@@ -51,7 +45,6 @@ def go [buckets: list<int>, i: int, q: int, c: int] {
 
   let k = $buckets | get $i
   let n = (go $buckets ($i - 1) $q $c) + (go $buckets ($i - 1) ($q - $k) ($c - 1))
-  # print [$i,$q,$c,$n]
   stor insert -t eggnog -d { i: $i, q: $q, c: $c, n: $n }
   $n
 }
