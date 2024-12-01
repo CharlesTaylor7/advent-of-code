@@ -49,17 +49,19 @@ def conway [record]: nothing -> record {
         seq -1 1 
         | each { |l| 
           let result = $record | get -i (key ($i - $k) ($j - $l))
-          if $result == "#" { return 1 }
+          if $result == "#" { 1 } else { 0 }
         } 
       }
       | flatten
       | math sum
-
-      [(key $i $j) $n]
+      print [(key $i $j) $n]
     }
   }
-  | flatten
-  | into record
+  | ignore 
+
+  {}
+  # | flatten
+  # | into record
 }
 
 def key [i: int, j: int]: nothing -> string {
