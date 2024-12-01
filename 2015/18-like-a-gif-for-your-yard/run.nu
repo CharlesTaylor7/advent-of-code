@@ -39,10 +39,11 @@ export def part1 [] {
     }
   }
 
-  for i in (seq 1 100) {
+  for i in (seq 1 5) {
     conway $i
+    show $i
   }
-
+  #
   stor open | query db $"select COUNT\(*\) as count from conway where n = 100" | first | get count
 }
 
@@ -66,8 +67,8 @@ export def live-neighbors [n: int, i: int, j: int] {
         } 
       }
       | flatten
+      | each { $"'($in)'" }
       | str join ', '
-  put neighbors
 
   let keys = []
   stor open 
@@ -78,7 +79,7 @@ export def live-neighbors [n: int, i: int, j: int] {
 
 export def is-live [n: int, i: int, j: int] {
   stor open 
-  | query db $"select 1 from conway where n = ($n) and key = (key $i $j)"
+  | query db $"select 1 from conway where n = ($n) and key = \'(key $i $j)\'"
   | is-not-empty
 }
 
@@ -103,16 +104,17 @@ export def conway [n: int] {
   | ignore
 }
 
-def show [graph: record]: nothing -> string {
+export def show [n: int] {
   seq 0 99
   | each { |j|
     seq 0 99 
     | each { |i|
-        $graph | get (key ($i) ($j))
+        if (is-live $n $i $j) { "#" } else { "." }
     }
     | str join ''
+    | print $in
   }
-  | str join "\n"
+  | ignore 
 }
 
 def key [i: int, j: int]: nothing -> string {
