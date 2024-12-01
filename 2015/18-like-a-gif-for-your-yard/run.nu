@@ -33,10 +33,15 @@ def part1 [] {
   }
   | flatten
   | into record
-  seq 1 100
-  | reduce --fold $map { |_ acc| conway $acc }
-  | transpose 
-  | get column1
+  print "seed"
+  print (show ($map))
+  print "step 1"
+  print (show (conway $map))
+
+  # seq 1 100
+  # | reduce --fold $map { |_ acc| conway $acc }
+  # | transpose 
+  # | get column1
 }
 
 def conway [record]: nothing -> record {
@@ -48,6 +53,7 @@ def conway [record]: nothing -> record {
       | each { |k| 
         seq -1 1 
         | each { |l| 
+          if $k == 0 and $l == 0 { return 0 }
           let result = $record | get -i (key ($i - $k) ($j - $l))
           if $result == "#" { 1 } else { 0 }
         } 
@@ -65,6 +71,18 @@ def conway [record]: nothing -> record {
   }
   | flatten
   | into record
+}
+
+def show [graph: record]: nothing -> string {
+  seq 0 99
+  | each { |j|
+    seq 0 99 
+    | each { |i|
+        $graph | get (key ($i) ($j))
+    }
+    | str join ''
+  }
+  | str join "\n"
 }
 
 def key [i: int, j: int]: nothing -> string {
