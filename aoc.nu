@@ -26,6 +26,8 @@ export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" templa
     let template = $"templates/($template)/*" | into glob
     cp -r $template $dir
   }
+  start $page 
+
 }
 
 export def answer [year: int@"nu-complete-year" day: int@"nu-complete-day" level: int@"nu-complete-level" answer: int] {
