@@ -52,8 +52,26 @@ export def part1 [] {
     let obstacle = $result | first
     let current = $position
     let to_visit = match $direction {
-      "up" => { seq ($obstacle.row + 1) | each { |row| { row: $row, col: $current.col } } },
-      "down" => { seq $current.row ($obstacle.row - 1) | each { |row| { row: $row, col: $current.col } } },
+      "up" => { 
+        seq ($obstacle.row + 1) ($current.row - 1)
+        | reverse 
+        | each { |row| { row: $row, col: $current.col } } 
+      },
+      "down" => { 
+        seq ($current.row + 1) ($obstacle.row - 1) 
+        | each { |row| { row: $row, col: $current.col } } 
+      },
+
+      "left" => { 
+        seq ($obstacle.col + 1) ($current.col - 1)
+        | reverse
+        | each { |col| { row: $current.row, col: $col } } 
+      },
+
+      "right" => { 
+        seq ($current.col + 1) ($obstacle.col - 1) 
+        | each { |col| { row: $current.row, col: $col } } 
+      },
     }
 
     if ($to_visit | is-empty) {
