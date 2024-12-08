@@ -1,6 +1,9 @@
-export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" template?: string@"nu-complete-template"] {
-  let page = http get $"https://adventofcode.com/($year)/day/($day)" 
 
+export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" template?: string@"nu-complete-template"] {
+  plugin use query
+  let url = $"https://adventofcode.com/($year)/day/($day)" 
+  ^open $url
+  let page = http get $url
   let title = $page
   | query web -q 'h2'
   | first
@@ -19,15 +22,13 @@ export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" templa
   | query web -q "article.day-desc" -m
   | save -f $"($dir)/description.txt"
 
-  http get $"https://adventofcode.com/($year)/day/($day)/input" --headers [Cookie (cookie)]
-  | save -f $"($dir)/input.txt"
-
   if $template != null {
     let template = $"templates/($template)/*" | into glob
     cp -r $template $dir
   }
-  start $page 
 
+  http get $"https://adventofcode.com/($year)/day/($day)/input" --headers [Cookie (cookie)]
+  | save -f $"($dir)/input.txt"
 }
 
 export def answer [year: int@"nu-complete-year" day: int@"nu-complete-day" level: int@"nu-complete-level" answer: int] {
@@ -58,7 +59,7 @@ export def check [year: int@"nu-complete-year"] {
 }
 
 def read-dotenv [] {
-  open .env 
+  open --raw .env 
   | split row "\n" 
   | each { split row "=" }
   | into record
