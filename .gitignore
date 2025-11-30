@@ -1,4 +1,4 @@
-.env
+env.nuon
 Cargo.lock
 node_modules/
 target/

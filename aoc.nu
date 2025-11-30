@@ -1,6 +1,6 @@
+let SECRETS = open env.nuon
 
 export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" template?: string@"nu-complete-template"] {
-  plugin use query
   let url = $"https://adventofcode.com/($year)/day/($day)" 
   ^open $url
   let page = http get $url
@@ -54,23 +54,16 @@ export def check [year: int@"nu-complete-year"] {
   | into record
 
   seq 1 25
-  | each { |i| [$i, ($stars | get -i ($i | into string) | default 0)] }
-  | into record
-}
-
-def read-dotenv [] {
-  open --raw .env 
-  | split row "\n" 
-  | each { split row "=" }
+  | each { |i| [$i, ($stars | get -o ($i | into string) | default 0)] }
   | into record
 }
 
 def cookie [] {
-  $"session=(read-dotenv | get COOKIE_SESSION_ID)"
+  $"session=($SECRETS | get COOKIE_SESSION_ID)"
 }
 
 def nu-complete-year [] {
-  seq 2015 2024
+  seq 2015 2025
 }
 
 def nu-complete-day [] {
