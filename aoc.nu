@@ -1,4 +1,3 @@
-let SECRETS = open env.nuon
 
 export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" template?: string@"nu-complete-template"] {
   let url = $"https://adventofcode.com/($year)/day/($day)" 
@@ -59,7 +58,9 @@ export def check [year: int@"nu-complete-year"] {
 }
 
 def cookie [] {
-  $"session=($SECRETS | get COOKIE_SESSION_ID)"
+
+  let SECRETS = open env.nuon
+  $"session=($SECRETS.COOKIE_SESSION_ID)"
 }
 
 def nu-complete-year [] {

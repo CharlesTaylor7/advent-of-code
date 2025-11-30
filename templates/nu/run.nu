@@ -1,5 +1,7 @@
+const CURRENT = path self
+
 export def input [] {
-  $env.CURRENT_FILE 
+  $CURRENT
   | path dirname
   | path join "input.txt"
   | open $in

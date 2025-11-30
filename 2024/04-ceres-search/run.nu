@@ -1,5 +1,7 @@
+const CURRENT = path self
+
 export def input [] {
-  $env.CURRENT_FILE 
+  $CURRENT
   | path dirname
   | path join "input.txt"
   | open $in
@@ -9,7 +11,8 @@ def nu-complete-part [] {
   [1 2]
 }
 
-export const example = "MMMSXXMASM
+export def example [] {
+"MMMSXXMASM
 MSAMXMSMSA
 AMXSXMAAMM
 MSAMASMSMX
@@ -19,6 +22,7 @@ SMSMSASXSS
 SAXAMASAAA
 MAMMMXMMMM
 MXMXAXMASX"
+}
 
 def main [part: int@"nu-complete-part"] {
   input | match $part {
@@ -27,8 +31,12 @@ def main [part: int@"nu-complete-part"] {
   }
 }
 
+export def to-map [] {
+  split row "\n" | each { split chars }
+}
+
 export def part1 [] {
-  let grid = split row "\n" | each { split chars }
+  let grid = $in | to-map
   let n = $grid | first | length
   [
     (diagonals-1 $n)
@@ -45,7 +53,7 @@ export def part1 [] {
   | append [(cols $grid $n)]
   | each { 
     window 4
-    | filter { str join | $in == "XMAS" or $in == "SAMX" }
+    | where { str join | $in == "XMAS" or $in == "SAMX" }
     | length
   }
   | math sum
@@ -110,6 +118,12 @@ export def diagonals-4 [n: int] {
       { row: ($i + $k) col: ($n - 1 - $k) }
     }
   }
+}
+
+def highlight [  ] {
+  let n = 4;
+  let placholder = "⚪"
+  
 }
 
 

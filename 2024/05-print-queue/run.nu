@@ -1,8 +1,7 @@
+#!/usr/bin/env nu
+
 export def input [] {
-   $env.CURRENT_FILE 
-  | path dirname
-  | path join "input.txt"
-  | open $in
+  open "./input.txt"
 }
 
 def nu-complete-part [] {
@@ -10,18 +9,17 @@ def nu-complete-part [] {
 }
 
 def main [part: int@"nu-complete-part"] {
-  input | match $part {
-    1 => (part1)
-    2 => (part2)
+  match $part {
+    1 => (input | part1)
+    2 => (input | part2)
   }
 }
 
 export def part1 [] {
   match (parse-input) {
     {$rules, $runs } => { $runs
-      | filter { |run| is-sorted $run $rules }
+      | where { |run| is-sorted $run $rules }
       | each { median $in }
-
       | math sum
     }
   }
@@ -31,7 +29,7 @@ export def part2 [] {
   match (parse-input) {
     { $rules, $runs } => {
       $runs
-      | filter { |run| not (is-sorted $run $rules) }
+      | where { |run| not (is-sorted $run $rules) }
       | each { |run| sort-run $run $rules }
       | each { median $in }
       | math sum
@@ -50,7 +48,7 @@ export def parse-input [] {
 
   let runs = $sections.1 
   | split row "\n" 
-  | filter { is-not-empty }
+  | where { is-not-empty }
   | each { |row|
     $"[($row)]" | from json 
   } 
