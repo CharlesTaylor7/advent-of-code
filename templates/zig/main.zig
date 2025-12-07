@@ -1,13 +1,10 @@
 const std = @import("std");
-const AocError = error{ NotImplemented, InvalidPart, MissingArg};
-const Part = enum {one, two };
-const Args = struct {
-    part: Part,
-    filename: [] const u8
-};
+const AocError = error{ NotImplemented, InvalidPart, MissingArg };
+const Part = enum { one, two };
+const Args = struct { part: Part, filename: []const u8 };
 
 pub fn main() !void {
-    const args = try parse_args(); 
+    const args = try parse_args();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -31,23 +28,22 @@ fn parse_args() !Args {
     const filename = args.next() orelse return AocError.MissingArg;
     const rawPart = args.next() orelse return AocError.MissingArg;
     const part = try parse_part(rawPart);
-    return .{ .part = part,  .filename = filename };
+    return .{ .part = part, .filename = filename };
 }
 
-fn parse_part(arg: [] const u8) !Part {
+fn parse_part(arg: []const u8) !Part {
     const part = try std.fmt.parseInt(u8, arg, 10);
     if (part == 1) return Part.one;
     if (part == 2) return Part.two;
     return AocError.InvalidPart;
 }
 
-
-pub fn part1(fileContents: [] const u8) !usize {
+pub fn part1(fileContents: []const u8) !u64 {
     _ = fileContents;
     return AocError.NotImplemented;
 }
 
-pub fn part2(fileContents: [] const u8) !usize {
+pub fn part2(fileContents: []const u8) !u64 {
     _ = fileContents;
     return AocError.NotImplemented;
 }
