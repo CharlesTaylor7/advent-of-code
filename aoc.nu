@@ -80,5 +80,6 @@ def nu-complete-template [] {
     nu
     rust
     typescript
+    zig
   ]
 }
