@@ -122,8 +122,16 @@ pub fn part2(context: Context) !u64 {
 
         const start = iter.next() orelse return AocError.InvalidRange;
         const end = iter.next() orelse return AocError.InvalidRange;
-        const a = try std.fmt.parseInt(u128, start, 10);
-        const b = try std.fmt.parseInt(u128, start, 10);
+        const a = try std.fmt.parseInt(u64, start, 10);
+        const b = try std.fmt.parseInt(u64, end, 10);
+        var ids = std.array_list.Aligned(u64).initCapacity(context.alloc, 4);
+        defer ids.deinit();
+
+        std.debug.print("{d} {d}\n", .{ a, b });
+
+        for (2..end.len + 1) |r| {
+            std.debug.print(r);
+        }
         // for (a..c + 1) |i| {
         //     if (i == a and a < b) continue;
         //     if (i == c and c > d) continue;
