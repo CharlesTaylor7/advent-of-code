@@ -122,15 +122,32 @@ pub fn part2(context: Context) !u64 {
 
         const start = iter.next() orelse return AocError.InvalidRange;
         const end = iter.next() orelse return AocError.InvalidRange;
+        var ids = try std.array_list.Aligned(u64, null).initCapacity(context.alloc, 4);
+        defer ids.deinit(context.alloc);
+
         const a = try std.fmt.parseInt(u64, start, 10);
         const b = try std.fmt.parseInt(u64, end, 10);
-        var ids = std.array_list.Aligned(u64).initCapacity(context.alloc, 4);
-        defer ids.deinit();
+        // size is the size of each part
 
-        std.debug.print("{d} {d}\n", .{ a, b });
+        std.debug.print("a: {d}, b: {d}\n", .{ a, b });
+        const n = end.len;
+        for (0..(n / 2)) |i| {
+            const size = i + 1;
+            var x = try std.fmt.parseInt(u64, start[0..size], 10);
+            var y = try std.fmt.parseInt(u64, end[0..size], 10);
+            if (size != 1 and start.len != end.len) {
+                if ((start.len + 1) % size == 0) {
+                    x = std.math.pow(u64, 10, size - 1);
+                } else if (end.len % size == 1) {
+                    y = std.math.pow(u64, 10, size) - 1;
+                }
+            }
+            var id = x;
+            id += 0;
 
-        for (2..end.len + 1) |r| {
-            std.debug.print(r);
+            if (ids.has:
+            try ids.appendBounded(id);
+            std.debug.print("id: {d}\n", .{id});
         }
         // for (a..c + 1) |i| {
         //     if (i == a and a < b) continue;
