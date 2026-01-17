@@ -1,10 +1,8 @@
 #!/usr/bin/env swipl
 
-read_input(File, Input) :-
-    open(File, read, Stream),
-    read_line_to_codes(Stream, Codes),
-    maplist(char_code, Input, Codes),
-    close(Stream).
+read_file_to_chars(Filename, Content) :-
+    read_file_to_codes(Filename, Codes, []),
+    maplist(char_code, Content, Codes).
 
 % Part 1
 santa_part1([], 0).
@@ -17,7 +15,7 @@ santa_part1(['(' | Rest], Floor) :-
   Floor is Subtally + 1.
 
 ?- 
-  read_input("input.txt", Input),
+  read_file_to_chars("input.txt", Input),
   santa_part1(Input, Floor), 
   writeln(Floor).
 
@@ -25,7 +23,7 @@ santa_part1(['(' | Rest], Floor) :-
 
 % santa_part2(+Steps, +Floor, +Pos, +TargetFloor, -TargetPos)
 % When we reach the target floor, we have reached the target position
-santa_part2(_, TargetFloor, TargetPos, TargetFloor, TargetPos) :- !.
+santa_part2(_, TargetFloor, TargetPos, TargetFloor, TargetPos).
 % when the remaining steps is empty, we should stop, target pos not found
 santa_part2([], _, _, _, -1).
 santa_part2(['(' | Rest], Floor, Pos, TargetFloor, TargetPos) :- 
@@ -53,6 +51,6 @@ santa_part2([')' | Rest], Floor, Pos, TargetFloor, TargetPos) :-
 % %   Floor is Floor2 + 1.
 % %
 ?-
-  read_input("input.txt", Input),
+  read_file_to_chars("input.txt", Input),
   santa_part2(Input, 0, 0, -1, Pos), 
   writeln(Pos).
