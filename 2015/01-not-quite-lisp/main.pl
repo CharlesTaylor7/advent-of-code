@@ -4,21 +4,30 @@ read_file_to_chars(Filename, Content) :-
     read_file_to_codes(Filename, Codes, []),
     maplist(char_code, Content, Codes).
 
-% Part 1
-santa_part1([], 0).
-santa_part1([')' | Rest], Floor) :- 
-  santa_part1(Rest, Subtally),
-  Floor is Subtally - 1.
 
-santa_part1(['(' | Rest], Floor) :- 
-  santa_part1(Rest, Subtally),
-  Floor is Subtally + 1.
+part1(Input) :-
+  santa(Input, 0, Floor), 
+  writeln(Floor).
+
+% Part 1
+% santa(+Steps, +Floor, -FinalFloor)
+santa([], Floor, Floor).
+
+santa(['(' | Rest], Subtally, Floor) :- 
+  Tally is Subtally + 1,
+  santa(Rest, Tally, Floor).
+
+santa([')' | Rest], Subtally, Floor) :- 
+  Tally is Subtally - 1,
+  santa(Rest, Tally, Floor).
+
+% ignore non-paranthesis
+santa([_ | Rest], Tally, Floor) :- 
+  santa(Rest, Tally, Floor).
 
 ?- 
   read_file_to_chars("input.txt", Input),
-  santa_part1(Input, Floor), 
-  writeln(Floor).
-
+  part1(Input).
 
 
 % santa_part2(+Steps, +Floor, +Pos, +TargetFloor, -TargetPos)

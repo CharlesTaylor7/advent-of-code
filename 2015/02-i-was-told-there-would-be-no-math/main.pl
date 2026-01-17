@@ -1,15 +1,18 @@
 #!/usr/bin/env swipl
 
-read_input(File, Input) :-
-    open(File, read, Stream),
-    read_line_to_codes(Stream, Codes),
-    maplist(char_code, Input, Codes),
-    close(Stream).
+read_file_to_chars(Filename, Content) :-
+    read_file_to_codes(Filename, Codes, []),
+    maplist(char_code, Content, Codes).
 
-% Part 1
-soln([], 0).
+part1(Input, Answer) :-
+  !. % TODO
+
+part2(Input, Answer) :-
+  !. % TODO
 
 ?- 
-  read_input("input.txt", Input),
-  soln(Input, Answer), 
-  writeln(Answer).
+  read_file_to_chars("input.txt", Input),
+  part1(Input, Answer1),
+  writeln(Answer1),
+  part2(Input, Answer2),
+  writeln(Answer2).
