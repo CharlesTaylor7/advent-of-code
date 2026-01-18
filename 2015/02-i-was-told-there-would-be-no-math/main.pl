@@ -30,13 +30,8 @@ min(A, B, A) :- A #=< B.
 min(A, B, B) :- B #< A.
 
 /*
-* paper(/4
-* parse failures are signaled by NIL list used for the dimensions
-* 0 for parse failure
+* paper/4
 */
-paper([], _, _, 0).
-paper(_, [], _, 0).
-paper(_, _, [], 0).
 paper(H, W, L, Paper) :-
   min(H * W, W * L, H * L, Extra),
   Paper #= 2 * (H * W + W * L + H * L) + Extra.
@@ -75,7 +70,7 @@ map_then_sum(Dims, Acc, Total) :-
 * 
 */
 part1(Input, Answer) :-
-  split_string(Input, "\n", "", Lines),
+  split_string(Input, "\n", "\n", Lines),
   foldl(map_then_sum, Lines, 0, Answer).
 
 ?- 
