@@ -13,33 +13,19 @@ test(Predicate, Args) :-
     format("Testcase ~w failed!", Goal)
   ).
 
-/*
-* min/4
-* find the minimum of 3 values
-*/
-min(A, B, C, R) :- 
-  min(A, B, R1),
-  min(R1, C, R).
+ribbon_and_paper(H, W, L, P, R) :-
+  msort([H , W , L], [A, B | _]),
+  P #= 
+    2 * (H * W + W * L + H * L) % the total surface area
+    + A * B, % the smallest face
+  R #= 
+    2 * (A + B) % the two smallest perimeters
+    + H * W * L % the bow
+.
 
-/*
-* min/3
-* find the minimum of 2 values
-* left biased min
-*/
-min(A, B, A) :- A #=< B.
-min(A, B, B) :- B #< A.
 
-/*
-* paper/4
-*/
-paper(H, W, L, Paper) :-
-  min(H * W, W * L, H * L, Extra),
-  Paper #= 2 * (H * W + W * L + H * L) + Extra.
-
-?- test(paper, [2, 2, 2, 28]).
-
-to_dims(Row, H, W, L) :-
-  split_string(Row, "x", "", Dims),
+read_row(Spec, H, W, L) :-
+  split_string(Spec, "x", "", Dims),
   parse(Dims, H, W, L).
 
 parse([A, B, C], H, W, L) :-
@@ -48,32 +34,22 @@ parse([A, B, C], H, W, L) :-
   atom_number(C, L).
 
 
-?- test(to_dims, ["3x4x5", 3, 4, 5]).
-% parse([A, 'x', B, 'x', C], H, W, L) :- 
-%   atom_number(A, H),
-%   atom_number(B, W),
-%   atom_number(C, L).
-%
-% parse(_, [], [], []).
+?- test(read_row, ["3x4x5", 3, 4, 5]).
 
-ribbon(String, Ribbon) :-
-  to_dims(String, H, W, L),
-  paper(H, W, L, Ribbon).
+accumulate(Spec, [P1, R1], [P2, R2]) :-
+  read_row(Spec, H, W, L),
+  ribbon_and_paper(H, W, L, P, R),
+  P2 #= P + P1,
+  R2 #= R + R1.
 
-?- test(ribbon, ["3x4x5", 106]).
-
-
-map_then_sum(Dims, Acc, Total) :-
-  ribbon(Dims, Ribbon),
-  Total #= Acc + Ribbon.
 /*
 * 
 */
-part1(Input, Answer) :-
+solution(Input, Answer) :-
   split_string(Input, "\n", "\n", Lines),
-  foldl(map_then_sum, Lines, 0, Answer).
+  foldl(accumulate, Lines, [0, 0], Answer).
 
 ?- 
   read_file_to_string("input.txt", Input, []),
-  part1(Input, Answer1),
-  writeln(Answer1).
+  solution(Input, Answer),
+  writeln(Answer).
