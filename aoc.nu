@@ -1,4 +1,5 @@
 
+
 export def start [year: int@"nu-complete-year" day: int@"nu-complete-day" template?: string@"nu-complete-template"] {
   let url = $"https://adventofcode.com/($year)/day/($day)" 
   ^open $url
