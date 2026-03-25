@@ -1,8 +1,6 @@
-export function assert(condition: boolean, reason?: string) {
-  if (!condition) {
-    throw new Error(reason)
-  }
-}
+import {assertEquals} from "jsr:@std/assert";
+
+const MAX_ITERATIONS: number = 1_000_000;
 
 /**
 /* Fibonacci Heap
@@ -21,7 +19,7 @@ export class FibHeap<T> {
   }
 
   insert(key: number, item: T): void {
-    console.log(`Insert: ${key}, ${item}`)
+    // console.log(`Insert: ${key}, ${item}`)
     const node = new FibNode<T>(key, item)
     if (!this.min) {
       this.min = node
@@ -56,28 +54,31 @@ export class FibHeap<T> {
     // already empty
     if (!this.min) return 
     // exactly 1 element
+    // console.log(`Phase 0:`, this.min);
+    // console.log(`Delete:`, this.min.display())
     if (this.min === this.min.prev) {
       this.min = undefined
       return
     }
-    console.log(`Delete: ${this.min.display()}`)
 
     // Phase 1
     // merge old min's child into the root chain
+    
+    const newRoots = [...this.min.iterateSiblings()];
+    if (this.min.child) {
+      newRoots.push(this.min.child, ...this.min.child.iterateSiblings())
+    }
+
     this.min.child?.mergeChains(this.min.next)
-    const next = this.min.next;
     this.min.unlink()
+    // console.log(`Phase 1:`, newRoots.map(node => node.display()));
 
     // Phase 2
     // root node degrees
     const roots = new Map<number, FibNode<T>>()
-    
-    for (let root of next.iterateSiblings()) {
-      console.log('Sibling: ', root.display())
-      while (true) {
-        // showRoots(roots)
-        //console.log(`Placing: ${root.display()}`)
 
+    for (let root of newRoots) {
+      while (true) {
         const existing = roots.get(root.degree) 
         if (!existing) {
           roots.set(root.degree, root)
@@ -87,7 +88,8 @@ export class FibHeap<T> {
         root = this.linkRoots(root, existing)
       }
     } 
-    
+
+
     // Phase 3
     let minValue = Number.POSITIVE_INFINITY
     roots.forEach(root => {
@@ -96,6 +98,9 @@ export class FibHeap<T> {
         minValue = root.key
       }
     }) 
+
+    // console.log(`Phase 3:`, this.min);
+    // this.verify();
   }
 
   /**
@@ -120,19 +125,22 @@ export class FibHeap<T> {
     }
     root.degree++
 
-    console.log(`Link: ${child.display()} under ${root.display()}`)
+    // console.log("Link:", child.display(), "under", root.display())
     return root
   }
 
   toArray(): Array<[number, T]> {
     const array: Array<[number, T]> = []
     while (this.min) {
-      this.min.verify()
       const { key, value } = this.min
       array.push([key, value])
       this.deleteMin()
     }
     return array
+  }
+
+  verify() {
+    this.min?.verify();
   }
 }
 
@@ -193,48 +201,56 @@ class FibNode<T> {
 
   *iterateSiblings(): Generator<FibNode<T>, undefined> {
     const initial = this
-    let current: FibNode<T> = this
-    while (true) {
+    let current: FibNode<T> = this.next
+    for (let i = 0; i< MAX_ITERATIONS; i++){
+      if (current === initial) return
       yield current
       current = current.next
-      if (current === initial) return
     }
+    throw new Error(`MAX ITERATIONS exceeded`);
   }
 
-*iterateSiblingsBackwards(): Generator<FibNode<T>, undefined> {
+  *iterateSiblingsBackwards(): Generator<FibNode<T>, undefined> {
     const initial = this
-    let current: FibNode<T> = this
-    while (true) {
+    let current: FibNode<T> = this.prev
+    for (let i = 0; i < MAX_ITERATIONS; i++){
+      if (current === initial) return
       yield current
       current = current.prev
-      if (current === initial) return
     }
   }
 
+  verifySiblings() {
+    const array = new Array(...this.iterateSiblings()).map(node => node.value);
+    const backwards = new Array(...this.iterateSiblingsBackwards()).map(node => node.value);
+    backwards.reverse();
+    assertEquals(array, backwards);
+  }
 
-
-  verify() {
+  verifyDegree() {
     let count = 0;
     if (this.child !== undefined) {
-      for (const node of this.child.iterateSiblings()) {
+      count++
+      for (const _ of this.child.iterateSiblings()) {
         count++
+      }
+    }
+    assertEquals(this.degree, count, JSON.stringify(this.display()));
+  }
+
+  verify() {
+    this.verifySiblings();
+    this.verifyDegree();
+
+    if (this.child !== undefined) {
+      for (const node of this.child.iterateSiblings()) {
         node.verify()
       }
     }
-    assert(this.degree === count, this.display())
   }
 
-  display(): string {
+  display(): object {
     const {key, value, degree} = this
-    return `Node (${key}, ${value}, ${degree})`
+    return ({ key,value,degree});
   }
-}
-
-
-function showRoots<T>(roots: Map<number, FibNode<T>>) {
-  const map = new Map<number, string>()
-  for (const [d, root] of roots.entries()) {
-    map.set(d, root.display())
-  }
-  console.log('Roots:', map)
 }
