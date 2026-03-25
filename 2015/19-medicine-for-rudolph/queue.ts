@@ -9,6 +9,7 @@ const MAX_ITERATIONS: number = 1_000_000;
  */
 export class FibHeap<T> {
   private min?: FibNode<T>
+  private size: number = 0;
 
   constructor(items?: Iterable<[number, T]>) {
     if (items) {
@@ -29,6 +30,8 @@ export class FibHeap<T> {
         this.min = node
       }
     }
+    this.size++;
+    this.verify();
   }
 
   findMin(): [number, T] | null {
@@ -53,6 +56,8 @@ export class FibHeap<T> {
   deleteMin() {
     // already empty
     if (!this.min) return 
+    this.size--;
+
     // exactly 1 element
     // console.log(`Phase 0:`, this.min);
     // console.log(`Delete:`, this.min.display())
@@ -100,7 +105,7 @@ export class FibHeap<T> {
     }) 
 
     // console.log(`Phase 3:`, this.min);
-    // this.verify();
+    this.verify();
   }
 
   /**
@@ -129,18 +134,30 @@ export class FibHeap<T> {
     return root
   }
 
-  toArray(): Array<[number, T]> {
-    const array: Array<[number, T]> = []
-    while (this.min) {
-      const { key, value } = this.min
-      array.push([key, value])
-      this.deleteMin()
+  iter(): Generator<FibNode<T>> {
+    function* iterRec(node: FibNode<T> | undefined, siblings: boolean): Generator<FibNode<T>> {
+      if (!node) return;
+
+      yield node;
+      yield* iterRec(node.child, true);
+      if (siblings) {
+        for (const sibling of node.iterateSiblings()) {
+          yield* iterRec(sibling, false)
+        }
+      }
+
+      
     }
-    return array
+    return iterRec(this.min, true);
+  }
+
+  verifySize() {
+    assertEquals(this.iter().toArray().length, this.size);
   }
 
   verify() {
     this.min?.verify();
+    this.verifySize();
   }
 }
 
