@@ -1,3 +1,5 @@
+import { FibHeap } from "./queue.ts"
+
 interface Input {
   rules: RuleSet,
   medicine: string
@@ -114,30 +116,44 @@ function part2() {
   const seen = new Set<string>();
 
   // we have a queue at home
-  const queue: Array<QueueEntry> = [{molecule: "e", steps: 0}];
+  const queue = new FibHeap<string>();
+  queue.insert(0, "e");
 
-  while (queue.length) {
-    const item = queue.pop()!;
-    if (seen.has(item.molecule)) {
+  while (true)  {
+    const min =  queue.findMin()!;
+    if (min == null) {
+      console.error("Queue empty!");
+      return null; 
+    }
+    const [steps, molecule] = min;
+    queue.deleteMin()!;
+
+    if (seen.has(molecule)) {
       continue;
     }
     else {
-      seen.add(item.molecule);
+      seen.add(molecule);
     }
-    
-    for (const next of mutate(item.molecule, input.rules)) {
+
+    for (const next of mutate(molecule, input.rules)) {
       if (next == input.medicine) {
 
-        return item.steps + 1
+        return steps + 1
       }
       else if (next.length >= N) {
         continue
       }
       else {
-        queue.push({molecule: next, steps: item.steps + 1});
+        queue.insert(steps + 1, next);
       }
     }
   }
 }
 
-console.log(part2());
+function main() {
+  const answer = part2();
+  if (answer !== null) {
+    console.log(answer);
+  }
+}
+main()

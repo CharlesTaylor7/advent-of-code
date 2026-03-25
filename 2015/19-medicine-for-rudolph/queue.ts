@@ -21,6 +21,7 @@ export class FibHeap<T> {
   }
 
   insert(key: number, item: T): void {
+    console.log(`Insert: ${key}, ${item}`)
     const node = new FibNode<T>(key, item)
     if (!this.min) {
       this.min = node
@@ -32,8 +33,8 @@ export class FibHeap<T> {
     }
   }
 
-  findMin(): T | undefined {
-    return this.min?.value
+  findMin(): [number, T] | null {
+    return this.min ? [this.min.key, this.min.value] : null
   }
 
   merge(heap: FibHeap<T>): void {
@@ -64,17 +65,18 @@ export class FibHeap<T> {
     // Phase 1
     // merge old min's child into the root chain
     this.min.child?.mergeChains(this.min.next)
+    const next = this.min.next;
     this.min.unlink()
 
     // Phase 2
     // root node degrees
     const roots = new Map<number, FibNode<T>>()
     
-    for (let root of this.min.next.iterateSiblings()) {
+    for (let root of next.iterateSiblings()) {
       console.log('Sibling: ', root.display())
       while (true) {
-        showRoots(roots)
-        console.log(`Placing: ${root.display()}`)
+        // showRoots(roots)
+        //console.log(`Placing: ${root.display()}`)
 
         const existing = roots.get(root.degree) 
         if (!existing) {
@@ -199,10 +201,22 @@ class FibNode<T> {
     }
   }
 
+*iterateSiblingsBackwards(): Generator<FibNode<T>, undefined> {
+    const initial = this
+    let current: FibNode<T> = this
+    while (true) {
+      yield current
+      current = current.prev
+      if (current === initial) return
+    }
+  }
+
+
+
   verify() {
     let count = 0;
     if (this.child !== undefined) {
-      for (let node of this.child.iterateSiblings()) {
+      for (const node of this.child.iterateSiblings()) {
         count++
         node.verify()
       }
