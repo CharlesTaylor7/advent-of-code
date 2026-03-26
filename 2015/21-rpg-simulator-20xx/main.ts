@@ -68,10 +68,11 @@ function outfit(shop: Shop): Array<Build> {
 
 function apply(stats: Build, equip: Equipment): Build {
   return ({ 
-
-
+    hp: stats.hp, 
     gold: stats.gold + equip.cost,
-    hp: stats.hp , dmg: stats.dmg + equip.dmg, armor: stats.armor + equip.armor})
+    dmg: stats.dmg + equip.dmg, 
+    armor: stats.armor + equip.armor
+  })
 }
 
 type Winner = "me" | "boss";
