@@ -1,6 +1,6 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert/equals";
 
-const MAX_ITERATIONS: number = 1_000_000;
+const MAX_ITERATIONS = 1_000_000;
 
 /**
 /* Fibonacci Heap
@@ -11,24 +11,34 @@ export class FibHeap<T> {
   #min?: FibNode<T>;
   #size: number = 0;
   #debug?: boolean;
+// degree -> node
+// only maintained as part of delete min operation
+// after 2 sequential inserts, there are a multiple degree 1 roots.
+  #roots: Map<number, FibNode<T>> = new Map();
+  #insertsSinceLastDelete: number = 0;
 
   constructor(debug?: boolean) {
     this.#debug = debug;
   }
+
   size(): number {
     return this.#size;
   }
 
   insert(key: number, item: T): void {
+    this.#insertsSinceLastDelete++;
     // console.log("Insert:", key, item);
 
     const node = new FibNode<T>(key, item);
     if (!this.#min) {
       this.#min = node;
     } else {
-      this.#min.append(node);
       if (key < this.#min.key) {
+        this.#min.prev.append(node);
         this.#min = node;
+      }
+      else {
+        this.#min.append(node);
       }
     }
     this.#size++;
@@ -39,21 +49,6 @@ export class FibHeap<T> {
     return this.#min ? [this.#min.key, this.#min.value] : null;
   }
 
-  merge(heap: FibHeap<T>): void {
-    if (!heap.#min) {
-      return;
-    }
-    if (!this.#min) {
-      this.#min = heap.#min;
-    }
-
-    // determine new min
-    this.#min.mergeChains(heap.#min);
-
-    // link new min
-    this.#min = heap.#min.key < this.#min.key ? heap.#min : this.#min;
-  }
-
   deleteMin() {
     // console.log("Delete");
     // already empty
@@ -61,11 +56,14 @@ export class FibHeap<T> {
       // console.log("Empty");
       return;
     }
+    const newRootCount = this.#insertsSinceLastDelete + this.#min.degree;
     this.#size--;
+    this.#roots.delete(this.#min.degree);
+    this.#insertsSinceLastDelete = 0;
 
     // exactly 1 element
-    // console.log(`Phase 0:`, this.#min);
-    // console.log(`Delete:`, this.#min.display())
+    this.log(`Phase 0:`, this.#min);
+    this.log(`Delete:`, this.#min.display())
     if (this.#size === 0) {
       // console.log("Deleting last element");
       this.#min = undefined;
@@ -81,36 +79,35 @@ export class FibHeap<T> {
       newRoots.push(this.#min.child, ...this.#min.child.iterateSiblings());
     }
 
-    this.#min.child?.mergeChains(this.#min.next);
+    this.#min.child?.merge(this.#min.next);
     this.#min.unlink();
     // console.log(`Phase 1:`, newRoots.map(node => node.display()));
 
     // Phase 2
     // root node degrees
-    const roots = new Map<number, FibNode<T>>();
 
     for (let root of newRoots) {
       while (true) {
-        const existing = roots.get(root.degree);
+        const existing = this.#roots.get(root.degree);
         if (!existing) {
-          roots.set(root.degree, root);
+          this.#roots.set(root.degree, root);
           break;
         }
-        roots.delete(root.degree);
+        this.#roots.delete(root.degree);
         root = this.linkRoots(root, existing);
       }
     }
 
     // Phase 3
     let minValue = Number.POSITIVE_INFINITY;
-    roots.forEach((root) => {
+    for (const root of this.#roots.values()) {
       if (root.key < minValue) {
         this.#min = root;
         minValue = root.key;
       }
-    });
+    }
 
-    // console.log(`Phase 3:`, this.#min);
+    this.log(`Phase 3:`, this.#min);
     this.verify();
   }
 
@@ -156,7 +153,13 @@ export class FibHeap<T> {
     return iterRec(this.#min, true);
   }
 
+  log(...args: unknown[]) {
+    if (!this.#debug) return;
+    console.log(...args);
+  }
+
   verifySize() {
+    console.log("Size", this.#size, this.#min);
     assertEquals(this.iter().toArray().length, this.#size);
   }
 
@@ -175,7 +178,6 @@ class FibNode<T> {
   child?: FibNode<T>;
   // the number of children
   degree: number = 0;
-  marked: boolean = false;
 
   constructor(key: number, value: T) {
     this.key = key;
@@ -187,7 +189,7 @@ class FibNode<T> {
   /**
    * mergeChains based on
    */
-  mergeChains(fibNode: FibNode<T>) {
+  merge(fibNode: FibNode<T>) {
     const A = this;
     const A2 = A.next;
     const B = fibNode;
