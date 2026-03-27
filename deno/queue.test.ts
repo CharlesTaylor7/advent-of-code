@@ -1,8 +1,8 @@
 import { assertEquals } from "jsr:@std/assert";
-import { FibHeap } from "./queue.ts";
+import { FibHeap } from "@/queue.ts";
 
 Deno.test("fib heap", () => {
-  const heap = new FibHeap();
+  const heap = new FibHeap(true);
   heap.insert(0, "e");
   const min1 = heap.findMin();
   heap.deleteMin();

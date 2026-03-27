@@ -1,4 +1,4 @@
-import { FibHeap } from "./queue.ts";
+import { FibHeap } from "@/queue.ts";
 
 interface SpellCost {
   name: Spell;

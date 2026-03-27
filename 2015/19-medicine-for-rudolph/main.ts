@@ -1,4 +1,4 @@
-import { FibHeap } from "./queue.ts";
+import { FibHeap } from "@/queue.ts";
 
 interface Input {
   rules: RuleSet;
@@ -8,7 +8,7 @@ interface Input {
 type RuleSet = Map<string, string[]>;
 
 function parse() {
-  const input = Deno.readTextFileSync("./input.txt");
+  const input = Deno.readTextFileSync(import.meta.dirname + "/input.txt");
   let medicine = "";
   const rules = new Map<string, string[]>();
 
