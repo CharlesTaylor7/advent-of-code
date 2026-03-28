@@ -77,7 +77,6 @@ def count [buckets: list<int>, calories: int] {
 }
 
 # i is the index of the largest available bucket
-# q is amount of eggnog
 def go [buckets: list<int>, i: int, q: int] {
   if $q == 0 { return 1 }
   if $i < 0 { return 0 }

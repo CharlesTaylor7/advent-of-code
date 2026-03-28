@@ -1,5 +1,4 @@
 import { assertEquals } from "@std/assert/equals";
-
 const MAX_ITERATIONS = 1_000_000;
 
 /**
@@ -186,9 +185,6 @@ class FibNode<T> {
     this.next = this;
   }
 
-  /**
-   * mergeChains based on
-   */
   merge(fibNode: FibNode<T>) {
     const A = this;
     const A2 = A.next;
