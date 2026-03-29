@@ -31,8 +31,7 @@ ways: list[set[Vector]] = [set() for _ in range(501)]
 ways[0].add((0, 0, 0, 0, 0))
 for i in range(500):
     for way in ways[i]:
-        for j in range(4):
-            ingredient = matrix[j]
+        for ingredient in matrix:
             cal = way[4] + ingredient[4]
             if cal > 500:
                 continue

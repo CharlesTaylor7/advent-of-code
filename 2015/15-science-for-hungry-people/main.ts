@@ -1,9 +1,6 @@
 const REGEX =
   /\w+: capacity (?<capacity>-?\d+), durability (?<durability>-?\d+), flavor (?<flavor>-?\d+), texture (?<texture>-?\d+), calories (?<calories>-?\d+)/;
 
-const DIMENSIONS = ["calories", "capacity", "durability", "flavor", "texture"];
-type Branded<T> = number & { __brand: T };
-type Dim = typeof DIMENSIONS[number];
 type Calories = number;
 type Capacity = number;
 type Durability = number;
@@ -12,11 +9,11 @@ type Texture = number;
 
 type Vector = [Calories, Capacity, Durability, Flavor, Texture];
 
-function brand<T extends Dim>(
+function brand(
   groups: Record<string, string>,
-  field: T,
-): Branded<T> {
-  return Number(groups[field]) as Branded<T>;
+  field: string,
+) {
+  return Number(groups[field]);
 }
 
 // idea is dynamic programming.
@@ -39,7 +36,6 @@ function part2() {
     ]);
   }
   console.log(matrix);
-  return;
 
   // calories -> List of vectors that hit that calorie count
   const ways: Array<Set<string>> = Array(500);
@@ -48,7 +44,7 @@ function part2() {
   let max = Number.NEGATIVE_INFINITY;
   const seen = new Set<string>();
 
-  heap.insert(-tastiness(initial as Vector), initial as Vector);
+  heap.insert(-tastiness(initial), initial);
   while (true) {
     const min = heap.findMin();
     if (min == null) throw new Error("heap empty!");
@@ -58,10 +54,9 @@ function part2() {
       const next = Array.from(vector) as Vector;
 
       for (let j = 0; j < 5; j++) {
-        (next as number[])[j] += matrix[i][j] as number;
+        next[j] += matrix[i][j];
       }
 
-      console.log(next, seen.size);
       const s = next.toString();
       if (seen.has(s)) {
         continue;
