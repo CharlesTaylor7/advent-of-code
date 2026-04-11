@@ -17,7 +17,19 @@ export def main [part: int@"nu-complete-part"] {
   }
 }
 
+def tri-num [x y] {
+
+}
 def part1 [] {
+
+  mut i = 0
+  for y in (seq 1 6) {
+    for x in (seq 1 $y) {
+       
+      $i += 1
+      print $"($x), ($y), ($i)"
+    }
+  }
 }
 
 def part2 [] {
