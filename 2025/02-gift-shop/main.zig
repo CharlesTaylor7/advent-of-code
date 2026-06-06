@@ -145,10 +145,9 @@ pub fn part2(context: Context) !u64 {
             var id = x;
             id += 0;
 
-            if (ids.has:
+            // if (ids.has:
             try ids.appendBounded(id);
             std.debug.print("id: {d}\n", .{id});
-
         }
         // for (a..c + 1) |i| {
         //     if (i == a and a < b) continue;
