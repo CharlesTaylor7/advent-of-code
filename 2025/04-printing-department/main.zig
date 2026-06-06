@@ -3,17 +3,13 @@ const AocError = error{ NotImplemented, InvalidPart, MissingArg };
 const Part = enum { one, two };
 const Args = struct { part: Part, filename: []const u8 };
 
-pub fn main() !void {
-    const args = try parse_args();
+pub fn main(init: std.process.Init) !void {
+    const args = try parse_args(init.minimal.args);
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
+    const cwd = std.Io.Dir.cwd();
 
-    const cwd = std.fs.cwd();
-
-    const fileContents = try cwd.readFileAlloc(alloc, args.filename, 100000);
-    defer alloc.free(fileContents);
+    const fileContents = try cwd.readFileAlloc(init.io, args.filename, init.gpa, .unlimited);
+    defer init.gpa.free(fileContents);
 
     const answer = try switch (args.part) {
         Part.one => part1(fileContents),
@@ -22,24 +18,28 @@ pub fn main() !void {
     std.debug.print("{d}\n", .{answer});
 }
 
-fn parse_args() !Args {
-    var args = std.process.args();
+fn parse_args(passedArgs: std.process.Args) AocError!Args {
+    var args = passedArgs.iterate();
     _ = args.skip();
-    const filename = args.next() orelse return AocError.MissingArg;
-    const rawPart = args.next() orelse return AocError.MissingArg;
+    const filename = args.next() orelse return error.MissingArg;
+    const rawPart = args.next() orelse return error.MissingArg;
     const part = try parse_part(rawPart);
     return .{ .part = part, .filename = filename };
 }
 
-fn parse_part(arg: []const u8) !Part {
-    const part = try std.fmt.parseInt(u8, arg, 10);
+fn parse_part(arg: []const u8) AocError!Part {
+    const part = std.fmt.parseInt(u8, arg, 10) catch return AocError.InvalidPart;
     if (part == 1) return Part.one;
     if (part == 2) return Part.two;
     return AocError.InvalidPart;
 }
 
 pub fn part1(fileContents: []const u8) !u64 {
-    _ = fileContents;
+    var rows = std.mem.splitScalar(u8, fileContents, '\n');
+    while (rows.next()) |row| {
+        _ = row;
+    }
+
     return AocError.NotImplemented;
 }
 

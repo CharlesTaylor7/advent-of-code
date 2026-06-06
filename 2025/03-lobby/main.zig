@@ -52,7 +52,7 @@ pub fn solve(fileContents: []const u8, part: Part) !usize {
 // then the largest digit in a later position.
 fn maxJoltage(battery: []const u8, digits: usize) u64 {
     if (battery.len == 0) return 0;
-    var tally: u64 = 0;
+    var joltage: u64 = 0;
 
     var start: usize = 0;
     var max_d: u64 = 0;
@@ -69,11 +69,11 @@ fn maxJoltage(battery: []const u8, digits: usize) u64 {
             }
             if (max_d == 9) break;
         }
-        const exponent = digits - n - 1;
-        tally += max_d * pow10(exponent);
+        joltage *= 10;
+        joltage += max_d;
         max_d = 0;
     }
-    return tally;
+    return joltage;
 }
 
 fn pow10(n: usize) u64 {
