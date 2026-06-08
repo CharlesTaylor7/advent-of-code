@@ -36,8 +36,14 @@ fn parse_part(arg: []const u8) AocError!Part {
 
 pub fn part1(fileContents: []const u8) !u64 {
     var rows = std.mem.splitScalar(u8, fileContents, '\n');
+    var prev: ?[]const u8 = null;
+    var current: ?[]const u8 = null;
+    var next: ?[]const u8 = null;
     while (rows.next()) |row| {
-        _ = row;
+        current = row;
+
+        // check 
+        _ = row
     }
 
     return AocError.NotImplemented;
