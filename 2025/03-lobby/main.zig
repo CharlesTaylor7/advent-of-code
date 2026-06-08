@@ -3,24 +3,22 @@ const AocError = error{ NotImplemented, InvalidPart, MissingArg };
 const Part = enum { one, two };
 const Args = struct { part: Part, filename: []const u8 };
 
-pub fn main() !void {
-    const args = try parse_args();
+pub fn main(init: std.process.Init) !void {
+    const args = try parse_args(init.minimal.args);
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
+    const file = try std.Io.Dir.cwd().openFile(init.io, args.filename, .{});
+    const answer = try solve(init, file, args.part);
 
-    const cwd = std.fs.cwd();
+    const buffer = try init.gpa.alloc(u8, 1024);
+    defer init.gpa.free(buffer);
 
-    const fileContents = try cwd.readFileAlloc(alloc, args.filename, 100000);
-    defer alloc.free(fileContents);
-
-    const answer = try solve(fileContents, args.part);
-    std.debug.print("{d}\n", .{answer});
+    var stdout = std.Io.File.stdout().writer(init.io, buffer);
+    try stdout.interface.print("{d}\n", .{answer});
+    try stdout.interface.flush();
 }
 
-fn parse_args() !Args {
-    var args = std.process.args();
+fn parse_args(passedArgs: std.process.Args) !Args {
+    var args = passedArgs.iterate();
     _ = args.skip();
     const filename = args.next() orelse return AocError.MissingArg;
     const rawPart = args.next() orelse return AocError.MissingArg;
@@ -35,13 +33,15 @@ fn parse_part(arg: []const u8) !Part {
     return AocError.InvalidPart;
 }
 
-pub fn solve(fileContents: []const u8, part: Part) !usize {
+pub fn solve(init: std.process.Init, file: std.Io.File, part: Part) !usize {
     var total: u64 = 0;
-    var rows = std.mem.splitScalar(u8, fileContents, '\n');
-    while (rows.next()) |row| {
-        std.debug.print("{s}\n", .{row});
-        const joltage = maxJoltage(row, if (part == Part.one) 2 else 12);
-        std.debug.print("{d}\n", .{joltage});
+    const buffer = try init.gpa.alloc(u8, 1024);
+    defer init.gpa.free(buffer);
+
+    var reader = file.readerStreaming(init.io, buffer);
+
+    while (try reader.interface.takeDelimiter('\n')) |line| {
+        const joltage = maxJoltage(line, if (part == Part.one) 2 else 12);
         total += joltage;
     }
 
@@ -74,15 +74,4 @@ fn maxJoltage(battery: []const u8, digits: usize) u64 {
         max_d = 0;
     }
     return joltage;
-}
-
-fn pow10(n: usize) u64 {
-    if (n == 0) return 1;
-    if (n == 1) return 10;
-
-    if (n % 2 == 0) {
-        const m = pow10(n / 2);
-        return m * m;
-    }
-    return 10 * pow10(n - 1);
 }
