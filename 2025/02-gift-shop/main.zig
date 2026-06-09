@@ -2,37 +2,31 @@ const std = @import("std");
 const AocError = error{ NotImplemented, InvalidPart, MissingArg, InvalidRange };
 const Part = enum { one, two };
 const Args = struct { part: Part, filename: []const u8 };
-const Context = struct {
-    alloc: std.mem.Allocator,
-    input: []u8,
-};
+
 const Range = struct {
     start: []u8,
     end: []u8,
 };
 
-pub fn main() !void {
-    const args = try parse_args();
+pub fn main(init: std.process.Init) !void {
+    const args = try parse_args(init.minimal.args);
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const alloc = gpa.allocator();
-
-    const cwd = std.fs.cwd();
-
-    const fileContents = try cwd.readFileAlloc(alloc, args.filename, 100000);
-    defer alloc.free(fileContents);
-
-    const context = Context{ .alloc = alloc, .input = fileContents };
+    const file = try std.Io.Dir.cwd().openFile(init.io, args.filename, .{});
     const answer = try switch (args.part) {
-        Part.one => part1(context),
-        Part.two => part2(context),
+        Part.one => part1(init, file),
+        Part.two => part2(init, file),
     };
-    std.debug.print("{d}\n", .{answer});
+
+    const buffer = try init.gpa.alloc(u8, 1024);
+    defer init.gpa.free(buffer);
+
+    var stdout = std.Io.File.stdout().writer(init.io, buffer);
+    try stdout.interface.print("{d}\n", .{answer});
+    try stdout.interface.flush();
 }
 
-fn parse_args() !Args {
-    var args = std.process.args();
+fn parse_args(passedArgs: std.process.Args) !Args {
+    var args = passedArgs.iterate();
     _ = args.skip();
     const filename = args.next() orelse return AocError.MissingArg;
     const rawPart = args.next() orelse return AocError.MissingArg;
@@ -46,6 +40,7 @@ fn parse_part(arg: []const u8) !Part {
     if (part == 2) return Part.two;
     return AocError.InvalidPart;
 }
+
 // brute force way:
 // iterate over every id and sum up the invalid ones
 //
@@ -53,15 +48,18 @@ fn parse_part(arg: []const u8) !Part {
 // smarter iteration. leap over odd number of digits
 // iterate over the first "half" of each sequence of digits
 //
-pub fn part1(context: Context) !u64 {
-    var ranges = std.mem.tokenizeAny(u8, context.input, ",\n");
+pub fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     var total: u64 = 0;
     total += 0;
 
     var scratch_1 = [12]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     var scratch_2 = [12]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-    while (ranges.next()) |range| {
+    const buffer = try init.gpa.alloc(u8, 1024);
+    defer init.gpa.free(buffer);
+
+    var reader = file.reader(init.io, buffer);
+    while (try reader.interface.takeDelimiter(',')) |range| {
         if (range.len == 0) break;
         var iter = std.mem.splitScalar(u8, range, '-');
 
@@ -111,19 +109,20 @@ fn toDigit(digit: comptime_int) u8 {
     return digit + 48;
 }
 
-pub fn part2(context: Context) !u64 {
-    var ranges = std.mem.tokenizeAny(u8, context.input, ",\n");
+pub fn part2(init: std.process.Init, file: std.Io.File) !u64 {
     var total: u64 = 0;
     total += 0;
 
-    while (ranges.next()) |range| {
+    const buffer = try init.gpa.alloc(u8, 1024);
+    var reader = file.reader(init.io, buffer);
+    while (try reader.interface.takeDelimiter(',')) |range| {
         if (range.len == 0) break;
         var iter = std.mem.splitScalar(u8, range, '-');
 
         const start = iter.next() orelse return AocError.InvalidRange;
         const end = iter.next() orelse return AocError.InvalidRange;
-        var ids = try std.array_list.Aligned(u64, null).initCapacity(context.alloc, 4);
-        defer ids.deinit(context.alloc);
+        var ids = try std.array_list.Aligned(u64, null).initCapacity(init.gpa, 4);
+        defer ids.deinit(init.gpa);
 
         const a = try std.fmt.parseInt(u64, start, 10);
         const b = try std.fmt.parseInt(u64, end, 10);
