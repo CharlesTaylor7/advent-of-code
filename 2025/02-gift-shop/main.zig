@@ -41,126 +41,38 @@ fn parse_part(arg: []const u8) !Part {
     return AocError.InvalidPart;
 }
 
-// brute force way:
-// iterate over every id and sum up the invalid ones
+// leap over odd number of digits
 //
-// other way:
-// smarter iteration. leap over odd number of digits
-// iterate over the first "half" of each sequence of digits
-//
+// take the first n/2 digits and iterate those and see if they fall in the range.
 pub fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     var total: u64 = 0;
-    total += 0;
-
-    var scratch_1 = [12]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-    var scratch_2 = [12]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
     const buffer = try init.gpa.alloc(u8, 1024);
     defer init.gpa.free(buffer);
 
     var reader = file.reader(init.io, buffer);
-    var limit: u8 = 5;
-
     while (try reader.interface.takeDelimiter(',')) |range| {
-        limit -= 1;
-        if (limit == 0) break;
-        std.debug.print("{s}\n", .{range});
-        if (range.len == 0) break;
+        var parts = std.mem.tokenizeScalar(u8, range, '-');
+        const start = parts.next() orelse return AocError.InvalidRange;
+        const end = parts.next() orelse return AocError.InvalidRange;
 
-        var iter = std.mem.splitScalar(u8, range, '-');
+        // assume start and end have close to the same number of digits
+        //
+        if (start.len > end.len) return AocError.InvalidRange;
+        if (start.len % 2 == 1 and end.len % 2 == 1) continue;
 
-        var start = iter.next() orelse return AocError.InvalidRange;
-        var end = iter.next() orelse return AocError.InvalidRange;
-
-        if (start.len % 2 == 1) {
-            var slice = scratch_1[0 .. start.len + 1];
-            slice[0] = toDigit(1);
-            for (0..start.len) |i| {
-                slice[i + 1] = toDigit(0);
-            }
-            start = slice;
-        }
-
-        if (end.len % 2 == 1) {
-            var slice = scratch_2[0 .. end.len - 1];
-            for (0..end.len - 1) |i| {
-                slice[i] = toDigit(9);
-            }
-            end = slice;
-        }
-
-        if (start.len > end.len) continue;
-        if (start.len < end.len) return AocError.NotImplemented;
-
-        const n = start.len / 2;
-        const a = try std.fmt.parseInt(u32, start[0..n], 10);
-
-        const b = try std.fmt.parseInt(u32, start[n..], 10);
-        const c = try std.fmt.parseInt(u32, end[0..n], 10);
-        const d = try std.fmt.parseInt(u32, end[n..], 10);
-
-        for (a..c + 1) |i| {
-            if (i == a and a < b) continue;
-            if (i == c and c > d) continue;
-            const id: u64 = i + i * (std.math.pow(u64, 10, n));
-            std.debug.print("id: {d}\n", .{id});
-            total += id;
-        }
+        const a = start[0 .. start.len / 2];
+        const b = start[start.len / 2 ..];
+        const c = end[0 .. end.len / 2];
+        const d = end[end.len / 2 ..];
+        std.debug.print("{s} {s} - {s} {s}\n", .{ a, b, c, d });
     }
-    return total;
-}
-
-fn toDigit(digit: comptime_int) u8 {
-    if (digit < 0) return undefined;
-    if (digit > 9) return undefined;
-    return digit + 48;
-}
-
-pub fn part2(init: std.process.Init, file: std.Io.File) !u64 {
-    var total: u64 = 0;
     total += 0;
-
-    const buffer = try init.gpa.alloc(u8, 1024);
-    var reader = file.reader(init.io, buffer);
-    while (try reader.interface.takeDelimiter(',')) |range| {
-        if (range.len == 0) break;
-        var iter = std.mem.splitScalar(u8, range, '-');
-
-        const start = iter.next() orelse return AocError.InvalidRange;
-        const end = iter.next() orelse return AocError.InvalidRange;
-        var ids = try std.array_list.Aligned(u64, null).initCapacity(init.gpa, 4);
-        defer ids.deinit(init.gpa);
-
-        const a = try std.fmt.parseInt(u64, start, 10);
-        const b = try std.fmt.parseInt(u64, end, 10);
-        // size is the size of each part
-
-        std.debug.print("a: {d}, b: {d}\n", .{ a, b });
-        const n = end.len;
-        for (0..(n / 2)) |i| {
-            const size = i + 1;
-            var x = try std.fmt.parseInt(u64, start[0..size], 10);
-            var y = try std.fmt.parseInt(u64, end[0..size], 10);
-            if (size != 1 and start.len != end.len) {
-                if ((start.len + 1) % size == 0) {
-                    x = std.math.pow(u64, 10, size - 1);
-                } else if (end.len % size == 1) {
-                    y = std.math.pow(u64, 10, size) - 1;
-                }
-            }
-            var id = x;
-            id += 0;
-
-            // if (ids.has:
-            try ids.appendBounded(id);
-            std.debug.print("id: {d}\n", .{id});
-        }
-        // for (a..c + 1) |i| {
-        //     if (i == a and a < b) continue;
-        //     if (i == c and c > d) continue;
-        //     const id: u64 = i + i * (std.math.pow(u64, 10, n));
-        //     total += id;
-        // }
-    }
     return total;
+}
+
+// TODO:
+pub fn part2(init: std.process.Init, file: std.Io.File) !u64 {
+    _ = init;
+    _ = file;
+    return 42;
 }
