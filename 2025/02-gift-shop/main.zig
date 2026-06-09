@@ -4,19 +4,17 @@ const Part = enum { one, two };
 const Args = struct { part: Part, filename: []const u8 };
 
 const Range = struct {
-    start: []u8,
-    end: []u8,
+    start: u64,
+    end: u64,
+    num_start_digits: usize,
+    num_end_digits: usize,
 };
 
 pub fn main(init: std.process.Init) !void {
     const args = try parse_args(init.minimal.args);
 
     const file = try std.Io.Dir.cwd().openFile(init.io, args.filename, .{});
-    const answer = try switch (args.part) {
-        Part.one => part1(init, file),
-        Part.two => part2(init, file),
-    };
-
+    const answer = try solve(init, file, args.part);
     const buffer = try init.gpa.alloc(u8, 1024);
     defer init.gpa.free(buffer);
 
@@ -41,38 +39,69 @@ fn parse_part(arg: []const u8) !Part {
     return AocError.InvalidPart;
 }
 
-// leap over odd number of digits
-//
-// take the first n/2 digits and iterate those and see if they fall in the range.
-pub fn part1(init: std.process.Init, file: std.Io.File) !u64 {
+pub fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     var total: u64 = 0;
     const buffer = try init.gpa.alloc(u8, 1024);
     defer init.gpa.free(buffer);
 
     var reader = file.reader(init.io, buffer);
-    while (try reader.interface.takeDelimiter(',')) |range| {
-        var parts = std.mem.tokenizeScalar(u8, range, '-');
+    while (try reader.interface.takeDelimiter(',')) |raw| {
+        var parts = std.mem.tokenizeAny(u8, raw, "-\n");
         const start = parts.next() orelse return AocError.InvalidRange;
         const end = parts.next() orelse return AocError.InvalidRange;
 
-        // assume start and end have close to the same number of digits
-        //
-        if (start.len > end.len) return AocError.InvalidRange;
-        if (start.len % 2 == 1 and end.len % 2 == 1) continue;
+        const range = Range{
+            .start = try std.fmt.parseInt(u32, start, 10),
+            .end = try std.fmt.parseInt(u32, end, 10),
+            .num_start_digits = start.len,
+            .num_end_digits = end.len,
+        };
 
-        const a = start[0 .. start.len / 2];
-        const b = start[start.len / 2 ..];
-        const c = end[0 .. end.len / 2];
-        const d = end[end.len / 2 ..];
-        std.debug.print("{s} {s} - {s} {s}\n", .{ a, b, c, d });
+        if (range.start > range.end) return AocError.InvalidRange;
+        switch (part) {
+            Part.one => {
+                total += try invalidIdSum(range, 2);
+            },
+
+            Part.two => {
+                for (2..(end.len + 1)) |num_parts| {
+                    total += try invalidIdSum(range, num_parts);
+                }
+            },
+        }
     }
-    total += 0;
+
     return total;
 }
 
-// TODO:
-pub fn part2(init: std.process.Init, file: std.Io.File) !u64 {
-    _ = init;
-    _ = file;
-    return 42;
+pub fn invalidIdSum(range: Range, numParts: usize) !u64 {
+    var total: u64 = 0;
+
+    const k = range.num_start_digits / numParts;
+    const base = std.math.pow(u64, 10, k);
+
+    // first k digits of range.start
+    var initial = range.start;
+    for (0..numParts - 1) |_| {
+        initial /= base;
+    }
+
+    const floor = base / 10;
+    initial = if (initial < floor) floor else initial;
+
+    for (initial..base) |testNum| {
+        std.debug.print("Id: {d}", .{testNum});
+        var result: u64 = 0;
+        for (0..numParts) |_| {
+            result *= base;
+            result += testNum;
+        }
+        if (result > range.end) break;
+        if (result >= range.start) {
+            std.debug.print("Id: {d}", .{result});
+            total += result;
+        }
+    }
+
+    return total;
 }
