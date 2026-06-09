@@ -59,8 +59,14 @@ pub fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     defer init.gpa.free(buffer);
 
     var reader = file.reader(init.io, buffer);
+    var limit: u8 = 5;
+
     while (try reader.interface.takeDelimiter(',')) |range| {
+        limit -= 1;
+        if (limit == 0) break;
+        std.debug.print("{s}\n", .{range});
         if (range.len == 0) break;
+
         var iter = std.mem.splitScalar(u8, range, '-');
 
         var start = iter.next() orelse return AocError.InvalidRange;
@@ -97,6 +103,7 @@ pub fn part1(init: std.process.Init, file: std.Io.File) !u64 {
             if (i == a and a < b) continue;
             if (i == c and c > d) continue;
             const id: u64 = i + i * (std.math.pow(u64, 10, n));
+            std.debug.print("id: {d}\n", .{id});
             total += id;
         }
     }
