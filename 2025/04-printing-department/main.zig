@@ -1,4 +1,5 @@
 const std = @import("std");
+
 const AocError = error{ NotImplemented, InvalidPart, MissingArg, InvalidRange };
 const Part = enum { one, two };
 const Args = struct { part: Part, filename: []const u8 };
@@ -33,8 +34,99 @@ fn parse_part(arg: []const u8) !Part {
 }
 
 fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
-    _ = part;
+    return switch (part) {
+        .one => part1(init, file),
+        .two => part2(init, file),
+    };
+}
 
+// -- TYPES --
+const Window = []Tile;
+const Tile = enum(u1) { blank, paper };
+const TILES = .{ .blank = '.', .paper = '@' };
+const Context = struct {
+    removed: u8,
+    grid: []Tile,
+    counts: []u4,
+    rows: usize,
+    cols: usize,
+};
+
+// I don't see a way to do this streaming. I think we have to load the entire file
+// I think we can still stream this, and optimize out stuff.
+// let's get it working first though.
+fn part2(init: std.process.Init, file: std.Io.File) !u64 {
+    // overcounts a newline per row. but this is roughly the right size.
+    const stat = try file.stat(init.io);
+    const grid = try init.gpa.alloc(Tile, stat.size);
+    defer init.gpa.free(grid);
+
+    var rows: usize = 0;
+    var cols: usize = 0;
+
+    {
+        const buffer = try init.gpa.alloc(u8, 1024);
+        defer init.gpa.free(buffer);
+
+        var reader = file.reader(init.io, buffer);
+
+        while (try reader.interface.takeDelimiter('\n')) |line| {
+            rows += 1;
+            if (rows == 1) {
+                cols = line.len;
+            } else if (cols != line.len) {
+                return error.UnevenLineLength;
+            }
+
+            for (0..cols) |i| {
+                const tile = switch (line[i]) {
+                    TILES.blank => Tile.blank,
+                    TILES.paper => Tile.paper,
+                    else => return error.InvalidTile,
+                };
+                grid[i] = tile;
+            }
+        }
+    }
+    // file no longer needed
+    file.close(init.io);
+
+    const size = rows * cols;
+    const counts = try init.gpa.alloc(u4, size);
+    defer init.gpa.free(counts);
+
+    const context = Context{
+        .counts = counts,
+        .grid = grid[0..size],
+        .rows = rows,
+        .cols = cols,
+        .removed = 0,
+    };
+
+    part2_loop(context);
+
+    return context.removed;
+}
+
+// updates grid in loop until it "settles"
+fn part2_loop(context: Context) void {
+    _ = context;
+    // first pass
+    for (0..context.cols) |i| {
+        for (0..context.rows) |j| {
+            if (context.grid[i + j * context.cols] == .paper) {
+                counts
+            }
+        }
+    }
+}
+
+fn safe_read(context: Context, i: , j: usize) *Tile {
+        const k = i + j * context.cols;
+    return &context.grid[i + j * context.cols];
+}
+
+fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     const buffer = try init.gpa.alloc(u8, 1024);
     defer init.gpa.free(buffer);
 
@@ -43,48 +135,60 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
 
     if (try reader.interface.takeDelimiter('\n')) |first| {
         const n = first.len;
-        // insight: compress the window by parsing to an enum/bool first
-        const window = try init.gpa.alloc(u8, 3 * n);
+        const window = try init.gpa.alloc(Tile, 3 * n);
         defer init.gpa.free(window);
 
-        @memcpy(window[0..n], first);
+        for (0..n) |i| {
+            const tile = switch (first[i]) {
+                TILES.blank => Tile.blank,
+                TILES.paper => Tile.paper,
+                else => return error.InvalidTile,
+            };
+            window[i] = tile;
+        }
 
-        var i: u8 = 0;
+        var j: u8 = 0;
         var count: u64 = 0;
         while (try reader.interface.takeDelimiter('\n')) |line| {
-            i += 1;
-            const offset = (i % 3) * n;
-            @memcpy(window[offset .. offset + n], line);
+            j += 1;
+            const offset = (j % 3) * n;
+            for (0..n) |i| {
+                const tile = switch (line[i]) {
+                    TILES.blank => Tile.blank,
+                    TILES.paper => Tile.paper,
+                    else => return error.InvalidTile,
+                };
+                window[offset + i] = tile;
+            }
 
             // figure out the counts for the preceding, because it has all the context it needs.
 
-            const prev = if (i == 1) null else sliceWindow(window, i - 2, n);
-            const current = sliceWindow(window, i - 1, n);
+            const prev = if (j == 1) null else sliceWindow(window, j - 2, n);
+            const current = sliceWindow(window, j - 1, n);
 
-            const next = sliceWindow(window, i, n);
+            const next = sliceWindow(window, j, n);
             count += countRow(prev, current, next, n);
         }
 
-        count += countRow(sliceWindow(window, i - 1, n), sliceWindow(window, i, n), null, n);
+        file.close(init.io);
+
+        count += countRow(sliceWindow(window, j - 1, n), sliceWindow(window, j, n), null, n);
         return count;
     }
     return error.EmptyFile;
 }
 
-fn sliceWindow(window: []u8, i: u8, n: usize) []u8 {
+fn sliceWindow(window: Window, i: u8, n: usize) Window {
     const start = (i % 3) * n;
     return window[start .. start + n];
 }
 
-const PAPER = '@';
-const BLANK = '.';
-const Location = enum { Initial, Middle, Final };
-fn countRow(prev: ?[]u8, current: []u8, next: ?[]u8, n: usize) u64 {
+fn countRow(prev: ?Window, current: Window, next: ?Window, n: usize) u64 {
     var count: u64 = 0;
     for (0..n) |i| {
         var cellCount: u64 = 0;
 
-        if (current[i] != PAPER) {
+        if (current[i] != Tile.paper) {
             std.debug.print(".", .{});
             continue;
         }
@@ -92,24 +196,24 @@ fn countRow(prev: ?[]u8, current: []u8, next: ?[]u8, n: usize) u64 {
         if (prev) |row| {
 
             // safe to count preceding row
-            if (i > 0 and row[i - 1] == PAPER) {
+            if (i > 0 and row[i - 1] == Tile.paper) {
                 cellCount += 1;
             }
 
-            if (row[i] == PAPER) {
+            if (row[i] == Tile.paper) {
                 cellCount += 1;
             }
 
-            if (i < n - 1 and row[i + 1] == PAPER) {
+            if (i < n - 1 and row[i + 1] == Tile.paper) {
                 cellCount += 1;
             }
         }
         // count current row
-        if (i > 0 and current[i - 1] == PAPER) {
+        if (i > 0 and current[i - 1] == Tile.paper) {
             cellCount += 1;
         }
 
-        if (i < n - 1 and current[i + 1] == PAPER) {
+        if (i < n - 1 and current[i + 1] == Tile.paper) {
             cellCount += 1;
         }
 
@@ -117,15 +221,15 @@ fn countRow(prev: ?[]u8, current: []u8, next: ?[]u8, n: usize) u64 {
             // safe to count following row
 
             // safe to count preceding row
-            if (i > 0 and row[i - 1] == PAPER) {
+            if (i > 0 and row[i - 1] == Tile.paper) {
                 cellCount += 1;
             }
 
-            if (row[i] == PAPER) {
+            if (row[i] == Tile.paper) {
                 cellCount += 1;
             }
 
-            if (i < n - 1 and row[i + 1] == PAPER) {
+            if (i < n - 1 and row[i + 1] == Tile.paper) {
                 cellCount += 1;
             }
         }
@@ -133,7 +237,7 @@ fn countRow(prev: ?[]u8, current: []u8, next: ?[]u8, n: usize) u64 {
             std.debug.print("x", .{});
             count += 1;
         } else {
-            std.debug.print("{c}", .{current[i]});
+            std.debug.print("@", .{});
         }
     }
 
