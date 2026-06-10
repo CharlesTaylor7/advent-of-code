@@ -45,8 +45,6 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     while (try reader.interface.takeDelimiter('\n')) |line| {
         if (line.len == 0) break;
 
-        if (line.len == 0) break;
-
         std.debug.print("{s}\n", .{line});
         const n = try std.fmt.parseInt(size, line[1..], 10);
         const sign: size = if (line[0] == 'L') -1 else if (line[0] == 'R') 1 else return InvalidFileError.BadDirection;
