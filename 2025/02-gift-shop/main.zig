@@ -39,6 +39,12 @@ fn parse_part(arg: []const u8) !Part {
     return AocError.InvalidPart;
 }
 
+pub fn parseInt(text: []const u8) !u64 {
+    return std.fmt.parseInt(u64, text, 10) catch |err| {
+        std.debug.print("could not parse {s}\n", .{text});
+        return err;
+    };
+}
 pub fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     var total: u64 = 0;
     const buffer = try init.gpa.alloc(u8, 1024);
@@ -51,8 +57,8 @@ pub fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
         const end = parts.next() orelse return AocError.InvalidRange;
 
         const range = Range{
-            .start = try std.fmt.parseInt(u32, start, 10),
-            .end = try std.fmt.parseInt(u32, end, 10),
+            .start = try parseInt(start),
+            .end = try parseInt(end),
             .num_start_digits = start.len,
             .num_end_digits = end.len,
         };
@@ -75,22 +81,37 @@ pub fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
 }
 
 pub fn invalidIdSum(range: Range, numParts: usize) !u64 {
+    // std.debug.print("range: {d}-{d} \n", .{ range.start, range.end });
     var total: u64 = 0;
 
     const k = range.num_start_digits / numParts;
-    const base = std.math.pow(u64, 10, k);
+    var base = std.math.pow(u64, 10, k);
 
-    // first k digits of range.start
+    const assembledLength = k * numParts;
     var initial = range.start;
-    for (0..numParts - 1) |_| {
-        initial /= base;
+    if (assembledLength == range.num_start_digits) {
+        //
+
+        //  std.debug.print("d:{d} p:{d} k: {d}\n", .{ range.num_start_digits, numParts, k });
+        // first k digits of range.start
+        for (0..numParts - 1) |_| {
+            initial /= base;
+        }
+
+        const floor = base / 10;
+        initial = if (initial < floor) floor else initial;
+    } else if (assembledLength + 1 == range.num_start_digits) {
+        initial = std.math.pow(u64, 10, k);
+        base *= 10;
+    } else {
+        return 0;
     }
 
-    const floor = base / 10;
-    initial = if (initial < floor) floor else initial;
+    // std.debug.print("initial:{d} base:{d}\n", .{ initial, base });
+    if (initial > base) return 0;
 
     for (initial..base) |testNum| {
-        std.debug.print("Id: {d}", .{testNum});
+        // std.debug.print("testNum: {d}\n", .{testNum});
         var result: u64 = 0;
         for (0..numParts) |_| {
             result *= base;
@@ -98,7 +119,7 @@ pub fn invalidIdSum(range: Range, numParts: usize) !u64 {
         }
         if (result > range.end) break;
         if (result >= range.start) {
-            std.debug.print("Id: {d}", .{result});
+            // std.debug.print("Id: {d}\n", .{result});
             total += result;
         }
     }
