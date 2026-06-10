@@ -80,6 +80,10 @@ pub fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     return total;
 }
 
+// for part 2 this doesn't work:
+// two issues:
+// - the sequence 222222, can be formed from 1,2,or 3 repetitions, but they all should count as the same invalid id, not 3.
+// - The first n digits of range.start is not a good lower bound. it misses 111, in the range 95-115
 pub fn invalidIdSum(range: Range, numParts: usize) !u64 {
     // std.debug.print("range: {d}-{d} \n", .{ range.start, range.end });
     var total: u64 = 0;
