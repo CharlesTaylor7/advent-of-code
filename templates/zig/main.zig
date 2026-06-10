@@ -1,7 +1,3 @@
-// We are trying to follow a resource conservative ethos:
-// - limit memory usage
-// - stream files where the problem allows
-// - close files, free memory when they are no longer needed.
 const std = @import("std");
 const AocError = error{ NotImplemented, InvalidPart, MissingArg, InvalidRange };
 const Part = enum { one, two };
@@ -41,13 +37,12 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     {
         const buffer = try init.gpa.alloc(u8, 1024);
         defer init.gpa.free(buffer);
+        defer file.close(init.io);
 
         var reader = file.reader(init.io, buffer);
         while (try reader.interface.takeDelimiter('\n')) |line| {
             _ = line;
         }
     }
-    // file no longer needed
-    file.close(init.io);
     return 42;
 }

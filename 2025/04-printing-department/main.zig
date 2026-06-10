@@ -67,9 +67,11 @@ fn part2(init: std.process.Init, file: std.Io.File) !u64 {
     {
         const buffer = try init.gpa.alloc(u8, 1024);
         defer init.gpa.free(buffer);
+        defer file.close(init.io);
 
         var reader = file.reader(init.io, buffer);
 
+        var index: usize = 0;
         while (try reader.interface.takeDelimiter('\n')) |line| {
             rows += 1;
             if (rows == 1) {
@@ -84,14 +86,18 @@ fn part2(init: std.process.Init, file: std.Io.File) !u64 {
                     TILES.paper => Tile.paper,
                     else => return error.InvalidTile,
                 };
-                grid[i] = tile;
+                std.debug.print("{c}", .{line[i]});
+                grid[index] = tile;
+                index += 1;
             }
+
+            std.debug.print("\n", .{});
         }
     }
-    // file no longer needed
-    file.close(init.io);
 
     const size = rows * cols;
+
+    std.debug.print("\nrows: {d} cols: {d} size: {d}\n\n", .{ rows, cols, size });
     const counts = try init.gpa.alloc(i8, size);
     defer init.gpa.free(counts);
 
@@ -102,6 +108,7 @@ fn part2(init: std.process.Init, file: std.Io.File) !u64 {
         .cols = cols,
         .removed = 0,
     };
+    // debug_print_grid(&context);
 
     part2_loop(&context);
 
@@ -109,36 +116,61 @@ fn part2(init: std.process.Init, file: std.Io.File) !u64 {
 }
 
 // updates grid in loop until it "settles"
+fn debug_print_grid(context: *const Context) void {
+    // first pass
+    for (0..context.rows) |j| {
+        for (0..context.cols) |i| {
+            const index = i + (j * context.cols);
+            context.counts[index] = 0;
+            if (context.grid[index] == .paper) {
+                std.debug.print("@", .{});
+            } else {
+                std.debug.print(".", .{});
+            }
+        }
+        std.debug.print("\n", .{});
+    }
+}
+
+// updates grid in loop until it "settles"
 fn part2_loop(context: *Context) void {
     // first pass
-    for (0..context.cols) |i| {
-        for (0..context.rows) |j| {
+    for (0..context.rows) |j| {
+        for (0..context.cols) |i| {
             const index = i + j * context.cols;
+
             if (context.grid[index] == .paper) {
                 for (0..3) |dx| {
                     for (0..3) |dy| {
                         if (dx == 1 and dy == 1) continue;
                         if (i == 0 and dx == 0) continue;
                         if (j == 0 and dy == 0) continue;
-                        if (context.grid[index + dx - 1 + (dy - 1) * context.cols] == .paper) {
-                            std.debug.print("tick {d}\n", .{index});
+                        if (i + dx > context.cols) continue;
+                        if (j + dy > context.rows) continue;
+                        //         std.debug.print("dx: {d}, dy: {d}\n", .{ dx, dy });
+                        const altIndex = index + dx + dy * context.cols - 1 - context.cols;
+                        if (context.grid[altIndex] == .paper) {
                             context.counts[index] += 1;
                         }
                     }
                 }
-                // std.debug.print("{d}", .{context.counts[index]});
+                std.debug.print("@", .{});
             } else {
-                // std.debug.print(".", .{});
+                std.debug.print(".", .{});
             }
         }
+        std.debug.print("\n", .{});
     }
+    std.debug.print("\n\n", .{});
 
-    var settled = true;
+    var settled = false;
     while (!settled) {
+        settled = true;
         for (0..context.cols) |i| {
             for (0..context.rows) |j| {
                 const index = i + j * context.cols;
                 if (context.grid[index] == .paper and context.counts[index] < 4) {
+                    std.debug.print("x", .{});
                     settled = false;
                     context.removed += 1;
                     context.grid[index] = .blank;
@@ -149,12 +181,22 @@ fn part2_loop(context: *Context) void {
                             if (dx == 1 and dy == 1) continue;
                             if (i == 0 and dx == 0) continue;
                             if (j == 0 and dy == 0) continue;
-                            context.counts[index + dx - 1 + (dy - 1) * context.cols] -= 1;
+                            if (i + dx - 1 > context.cols - 1) continue;
+                            if (j + dy - 1 > context.rows - 1) continue;
+
+                            const altIndex = index + dx + dy * context.cols - 1 - context.cols;
+                            context.counts[altIndex] -= 1;
                         }
                     }
+                } else if (context.grid[index] == .paper) {
+                    std.debug.print("@", .{});
+                } else {
+                    std.debug.print(".", .{});
                 }
             }
+            std.debug.print("\n", .{});
         }
+        std.debug.print("\n\n", .{});
     }
 }
 
