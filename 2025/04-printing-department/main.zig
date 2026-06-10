@@ -121,10 +121,14 @@ fn part2_loop(context: *Context) void {
                         if (i == 0 and dx == 0) continue;
                         if (j == 0 and dy == 0) continue;
                         if (context.grid[index + dx - 1 + (dy - 1) * context.cols] == .paper) {
+                            std.debug.print("tick {d}\n", .{index});
                             context.counts[index] += 1;
                         }
                     }
                 }
+                // std.debug.print("{d}", .{context.counts[index]});
+            } else {
+                // std.debug.print(".", .{});
             }
         }
     }
