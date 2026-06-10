@@ -47,7 +47,7 @@ const TILES = .{ .blank = '.', .paper = '@' };
 const Context = struct {
     removed: u8,
     grid: []Tile,
-    counts: []u4,
+    counts: []i8,
     rows: usize,
     cols: usize,
 };
@@ -92,10 +92,10 @@ fn part2(init: std.process.Init, file: std.Io.File) !u64 {
     file.close(init.io);
 
     const size = rows * cols;
-    const counts = try init.gpa.alloc(u4, size);
+    const counts = try init.gpa.alloc(i8, size);
     defer init.gpa.free(counts);
 
-    const context = Context{
+    var context = Context{
         .counts = counts,
         .grid = grid[0..size],
         .rows = rows,
@@ -103,27 +103,55 @@ fn part2(init: std.process.Init, file: std.Io.File) !u64 {
         .removed = 0,
     };
 
-    part2_loop(context);
+    part2_loop(&context);
 
     return context.removed;
 }
 
 // updates grid in loop until it "settles"
-fn part2_loop(context: Context) void {
-    _ = context;
+fn part2_loop(context: *Context) void {
     // first pass
     for (0..context.cols) |i| {
         for (0..context.rows) |j| {
-            if (context.grid[i + j * context.cols] == .paper) {
-                counts
+            const index = i + j * context.cols;
+            if (context.grid[index] == .paper) {
+                for (0..3) |dx| {
+                    for (0..3) |dy| {
+                        if (dx == 1 and dy == 1) continue;
+                        if (i == 0 and dx == 0) continue;
+                        if (j == 0 and dy == 0) continue;
+                        if (context.grid[index + dx - 1 + (dy - 1) * context.cols] == .paper) {
+                            context.counts[index] += 1;
+                        }
+                    }
+                }
             }
         }
     }
-}
 
-fn safe_read(context: Context, i: , j: usize) *Tile {
-        const k = i + j * context.cols;
-    return &context.grid[i + j * context.cols];
+    var settled = true;
+    while (!settled) {
+        for (0..context.cols) |i| {
+            for (0..context.rows) |j| {
+                const index = i + j * context.cols;
+                if (context.grid[index] == .paper and context.counts[index] < 4) {
+                    settled = false;
+                    context.removed += 1;
+                    context.grid[index] = .blank;
+
+                    // drop all surrounding
+                    for (0..3) |dx| {
+                        for (0..3) |dy| {
+                            if (dx == 1 and dy == 1) continue;
+                            if (i == 0 and dx == 0) continue;
+                            if (j == 0 and dy == 0) continue;
+                            context.counts[index + dx - 1 + (dy - 1) * context.cols] -= 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 fn part1(init: std.process.Init, file: std.Io.File) !u64 {
