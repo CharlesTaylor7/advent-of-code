@@ -39,7 +39,7 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     defer numbers.deinit(init.gpa);
 
     {
-        const buffer = try init.gpa.alloc(u8, 1024);
+        const buffer = try init.gpa.alloc(u8, 4096);
         defer init.gpa.free(buffer);
         defer file.close(init.io);
 
@@ -50,9 +50,11 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
 
         while (try reader.interface.takeDelimiter('\n')) |line| {
             if (line[0] == '*' or line[0] == '+') {
-                var i = 0;
-                for (std.mem.splitScalar(u8, line, ' ')) |op| {
-                    switch (op) {
+                var i: usize = 0;
+                var iter = std.mem.splitScalar(u8, line, ' ');
+                while (iter.next()) |op| {
+                    if (op.len == 0) continue;
+                    switch (op[0]) {
                         '+' => {
                             for (0..rows) |j| {
                                 total += numbers.items[i + j * cols];
@@ -71,9 +73,14 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
                 }
             } else {
                 rows += 1;
-
-                for (std.mem.splitScalar(u8, line, ' ')) |num| {
-                    numbers.append(init.gpa, try std.fmt.parseInt(num));
+                var iter = std.mem.splitScalar(u8, line, ' ');
+                while (iter.next()) |num| {
+                    if (num.len == 0) continue;
+                    const number = std.fmt.parseInt(u32, num, 10) catch |err| {
+                        std.debug.print("{d}\n", .{num[0]});
+                        return err;
+                    };
+                    try numbers.append(init.gpa, number);
                     if (first) cols += 1;
                 }
                 first = false;
