@@ -132,9 +132,37 @@ fn debug_print_grid(context: *const Context) void {
     }
 }
 
+fn check_cell(context: *Context, i: usize, j: usize) void {
+    const index = i + j * context.cols;
+    if (context.grid[index] == .paper and context.counts[index] < 4) {
+        std.debug.print("x", .{});
+        context.removed += 1;
+        context.grid[index] = .blank;
+
+        // drop all surrounding, recursively
+        for (0..3) |dx| {
+            for (0..3) |dy| {
+                if (dx == 1 and dy == 1) continue;
+                if (i == 0 and dx == 0) continue;
+                if (j == 0 and dy == 0) continue;
+                if (i + dx - 1 > context.cols - 1) continue;
+                if (j + dy - 1 > context.rows - 1) continue;
+
+                const altIndex = index + dx + dy * context.cols - 1 - context.cols;
+                context.counts[altIndex] -= 1;
+                check_cell(context, i + dx, j + dy);
+            }
+        }
+    } else if (context.grid[index] == .paper) {
+        std.debug.print("@", .{});
+    } else {
+        std.debug.print(".", .{});
+    }
+}
+
 // updates grid in loop until it "settles"
 fn part2_loop(context: *Context) void {
-    // first pass
+    // build counts;
     for (0..context.rows) |j| {
         for (0..context.cols) |i| {
             const index = i + j * context.cols;
@@ -163,40 +191,11 @@ fn part2_loop(context: *Context) void {
     }
     std.debug.print("\n\n", .{});
 
-    var settled = false;
-    while (!settled) {
-        settled = true;
-        for (0..context.cols) |i| {
-            for (0..context.rows) |j| {
-                const index = i + j * context.cols;
-                if (context.grid[index] == .paper and context.counts[index] < 4) {
-                    std.debug.print("x", .{});
-                    settled = false;
-                    context.removed += 1;
-                    context.grid[index] = .blank;
-
-                    // drop all surrounding
-                    for (0..3) |dx| {
-                        for (0..3) |dy| {
-                            if (dx == 1 and dy == 1) continue;
-                            if (i == 0 and dx == 0) continue;
-                            if (j == 0 and dy == 0) continue;
-                            if (i + dx - 1 > context.cols - 1) continue;
-                            if (j + dy - 1 > context.rows - 1) continue;
-
-                            const altIndex = index + dx + dy * context.cols - 1 - context.cols;
-                            context.counts[altIndex] -= 1;
-                        }
-                    }
-                } else if (context.grid[index] == .paper) {
-                    std.debug.print("@", .{});
-                } else {
-                    std.debug.print(".", .{});
-                }
-            }
-            std.debug.print("\n", .{});
+    // popcorn through grid in 1 pass.
+    for (0..context.cols) |i| {
+        for (0..context.rows) |j| {
+            check_cell(context, i, j);
         }
-        std.debug.print("\n\n", .{});
     }
 }
 
