@@ -47,8 +47,6 @@ const Space = enum(u4) { space = 10 };
 const Operator = enum(u4) { plus = 11, times = 12 };
 const FileCharTag = enum(u2) { digit, space, op };
 const FileCharUnion = packed union { digit: u4, space: Space, op: Operator };
-// would work but is oh so boring
-// const SlimFileChar = enum { space, zero, one, two, three, four, five, six, seven, eight, nine, plus, minus };
 
 const FileChar = packed struct {
     val: FileCharUnion,
@@ -64,6 +62,7 @@ const FileChar = packed struct {
 };
 const FileContents = struct {
     chars: []FileChar,
+    ops: []Operator,
     rows: usize,
     cols: usize,
 };
@@ -86,6 +85,7 @@ fn parse_file(init: std.process.Init, file: std.Io.File) !FileContents {
 
     var reader = file.reader(init.io, buffer);
 
+    var ops = try std.array_list.Aligned(Operator, null).initCapacity(init.gpa, 10);
     while (try reader.interface.takeDelimiter('\n')) |line| {
         if (cols == 0) {
             cols = line.len;
@@ -93,13 +93,22 @@ fn parse_file(init: std.process.Init, file: std.Io.File) !FileContents {
             return error.UnevenLines;
         }
         for (line) |c| {
-            fileChars[index] = switch (c) {
-                '0'...'9' => FileChar.of(.{ .digit = @intCast(c - 48) }),
-                ' ' => FileChar.of(.{ .space = .space }),
-                '+' => FileChar.of(.{ .op = .plus }),
-                '*' => FileChar.of(.{ .op = .times }),
+            switch (c) {
+                '0'...'9' => {
+                    fileChars[index] =
+                        FileChar.of(.{ .digit = @intCast(c - 48) });
+                },
+
+                ' ' => {
+                    fileChars[index] =
+                        FileChar.of(.{ .space = .space });
+                },
+                '+', '*' => {
+                    try ops.append(init.gpa, if (c == '*') .times else .plus);
+                },
+
                 else => return error.Invalid,
-            };
+            }
             index += 1;
         }
         rows += 1;
@@ -109,14 +118,33 @@ fn parse_file(init: std.process.Init, file: std.Io.File) !FileContents {
         .rows = rows,
         .cols = cols,
         .chars = fileChars,
+        .ops = ops,
     };
 }
 
 // idea is to load everything into memory and assert lines are even in length.
 // then process the file column by column
 fn part2(init: std.process.Init, file: std.Io.File) !u64 {
-    _ = try parse_file(init, file);
-    return 2;
+    const c = try parse_file(init, file);
+    var total: u64 = 0;
+
+    const x: usize = 0;
+    _ = x;
+    for (0..c.rows) |y| {
+        const char = c.chars[y];
+        switch (char.tag()) {
+            .digit => {
+                //
+            },
+
+            .space => {
+                //
+            },
+        }
+    }
+
+    total += 0;
+    return total;
 }
 fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     var total: u64 = 0;
