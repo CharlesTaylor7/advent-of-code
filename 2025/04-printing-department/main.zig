@@ -45,7 +45,7 @@ const Window = []Tile;
 const Tile = enum(u1) { blank, paper };
 const TILES = .{ .blank = '.', .paper = '@' };
 const Context = struct {
-    removed: u8,
+    removed: u64,
     grid: []Tile,
     counts: []i8,
     rows: usize,
@@ -133,9 +133,9 @@ fn debug_print_grid(context: *const Context) void {
 }
 
 fn check_cell(context: *Context, i: usize, j: usize) void {
+    debug_print_grid(context);
     const index = i + j * context.cols;
     if (context.grid[index] == .paper and context.counts[index] < 4) {
-        std.debug.print("x", .{});
         context.removed += 1;
         context.grid[index] = .blank;
 
@@ -150,13 +150,9 @@ fn check_cell(context: *Context, i: usize, j: usize) void {
 
                 const altIndex = index + dx + dy * context.cols - 1 - context.cols;
                 context.counts[altIndex] -= 1;
-                check_cell(context, i + dx, j + dy);
+                check_cell(context, i + dx - 1, j + dy - 1);
             }
         }
-    } else if (context.grid[index] == .paper) {
-        std.debug.print("@", .{});
-    } else {
-        std.debug.print(".", .{});
     }
 }
 
