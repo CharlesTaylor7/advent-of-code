@@ -1,10 +1,10 @@
 const std = @import("std");
+
 const AocError = error{ NotImplemented, InvalidPart, MissingArg, InvalidRange };
 const Part = enum { one, two };
 const Args = struct { part: Part, filename: []const u8 };
 
 pub fn main(init: std.process.Init) !void {
-    std.debug.print("{d}\n", .{@bitSizeOf(FileChar)});
     const args = try parse_args(init.minimal.args);
 
     const file = try std.Io.Dir.cwd().openFile(init.io, args.filename, .{});
@@ -60,9 +60,10 @@ const FileChar = packed struct {
         return FileCharTag.op;
     }
 };
+const Ops = std.array_list.Aligned(Operator, null);
 const FileContents = struct {
     chars: []FileChar,
-    ops: []Operator,
+    ops: Ops,
     rows: usize,
     cols: usize,
 };
@@ -85,7 +86,7 @@ fn parse_file(init: std.process.Init, file: std.Io.File) !FileContents {
 
     var reader = file.reader(init.io, buffer);
 
-    var ops = try std.array_list.Aligned(Operator, null).initCapacity(init.gpa, 10);
+    var ops = try Ops.initCapacity(init.gpa, 10);
     while (try reader.interface.takeDelimiter('\n')) |line| {
         if (cols == 0) {
             cols = line.len;
@@ -122,29 +123,87 @@ fn parse_file(init: std.process.Init, file: std.Io.File) !FileContents {
     };
 }
 
-// idea is to load everything into memory and assert lines are even in length.
-// then process the file column by column
-fn part2(init: std.process.Init, file: std.Io.File) !u64 {
-    const c = try parse_file(init, file);
-    var total: u64 = 0;
+const ScratchPad = struct {
+    total: u64 = 0,
+    product: u64 = 1,
+    subtotal: u64 = 0,
+    current: ?u64 = null,
+    opIndex: usize = 0,
+    ops: []Operator,
 
-    const x: usize = 0;
-    _ = x;
-    for (0..c.rows) |y| {
-        const char = c.chars[y];
-        switch (char.tag()) {
-            .digit => {
-                //
-            },
+    fn op(self: *const ScratchPad) Operator {
+        return self.ops[self.opIndex];
+    }
 
-            .space => {
-                //
-            },
+    fn handle_digit(self: *ScratchPad, digit: u4) void {
+        if (self.current) |num| {
+            self.current = num * 10 + digit;
+        } else {
+            self.current = digit;
         }
     }
 
-    total += 0;
-    return total;
+    fn handle_endnum(self: *ScratchPad) void {
+        if (self.current) |num| {
+            switch (self.op()) {
+                .plus => {
+                    self.subtotal += num;
+                },
+                .times => {
+                    self.product *= num;
+                },
+            }
+
+            self.current = null;
+        }
+    }
+
+    fn handle_endblock(self: *ScratchPad) void {
+        if (self.op() == .times) {
+            self.total += self.product;
+            self.product = 1;
+        }
+
+        if (self.op() == .plus) {
+            self.total += self.subtotal;
+            self.subtotal = 0;
+        }
+        self.opIndex += 1;
+    }
+};
+
+// idea is to load everything into memory and assert lines are even in length.
+// then process the file column by column
+fn part2(init: std.process.Init, file: std.Io.File) !u64 {
+    var c = try parse_file(init, file);
+    defer init.gpa.free(c.chars);
+    defer c.ops.deinit(init.gpa);
+
+    var s = ScratchPad{ .ops = c.ops.items };
+
+    for (0..c.cols) |x| {
+        s.handle_endnum();
+        var allSpaces = true;
+        for (0..c.rows) |y| {
+            const char = c.chars[x + y * c.cols];
+            switch (char.tag()) {
+                .digit => {
+                    s.handle_digit(char.val.digit);
+                    allSpaces = false;
+                },
+
+                .space => {
+                    s.handle_endnum();
+                },
+
+                else => unreachable,
+            }
+        }
+        if (allSpaces) s.handle_endblock();
+    }
+    s.handle_endblock();
+
+    return s.total;
 }
 fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     var total: u64 = 0;
