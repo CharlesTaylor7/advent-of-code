@@ -44,9 +44,9 @@ const Section = enum { digits, operators };
 // plus = 11,
 // times =12```
 const Space = enum(u4) { space = 10 };
-const Operator = enum(u4) { plus = 11, times = 12 };
+const Operator = enum(u1) { plus, times };
 const FileCharTag = enum(u2) { digit, space, op };
-const FileCharUnion = packed union { digit: u4, space: Space, op: Operator };
+const FileCharUnion = packed union { digit: u4, space: Space };
 
 const FileChar = packed struct {
     val: FileCharUnion,
@@ -57,13 +57,12 @@ const FileChar = packed struct {
     fn tag(self: FileChar) FileCharTag {
         if (self.val.digit < 10) return FileCharTag.digit;
         if (self.val.digit == 10) return FileCharTag.space;
-        return FileCharTag.op;
+        unreachable;
     }
 };
-const Ops = std.array_list.Aligned(Operator, null);
 const FileContents = struct {
     chars: []FileChar,
-    ops: Ops,
+    ops: []Operator,
     rows: usize,
     cols: usize,
 };
@@ -86,31 +85,43 @@ fn parse_file(init: std.process.Init, file: std.Io.File) !FileContents {
 
     var reader = file.reader(init.io, buffer);
 
-    var ops = try Ops.initCapacity(init.gpa, 10);
+    var ops: []Operator = undefined;
     while (try reader.interface.takeDelimiter('\n')) |line| {
         if (cols == 0) {
             cols = line.len;
         } else if (line.len != cols) {
             return error.UnevenLines;
         }
+        var midBlock = true;
+        //
+        var numOps: usize = 1;
+
+        var x: usize = 0;
         for (line) |c| {
             switch (c) {
                 '0'...'9' => {
+                    midBlock = true;
                     fileChars[index] =
                         FileChar.of(.{ .digit = @intCast(c - 48) });
                 },
 
                 ' ' => {
+                    if (rows == 0 and midBlock) numOps += 1;
+                    midBlock = false;
                     fileChars[index] =
                         FileChar.of(.{ .space = .space });
                 },
                 '+', '*' => {
-                    try ops.append(init.gpa, if (c == '*') .times else .plus);
+                    ops[x] = if (c == '*') .times else .plus;
+                    x += 1;
                 },
 
                 else => return error.Invalid,
             }
             index += 1;
+        }
+        if (rows == 0) {
+            ops = try init.gpa.alloc(Operator, numOps);
         }
         rows += 1;
     }
@@ -170,11 +181,11 @@ const ScratchPad = struct {
 // idea is to load everything into memory and assert lines are even in length.
 // then process the file column by column
 fn part2(init: std.process.Init, file: std.Io.File) !u64 {
-    var c = try parse_file(init, file);
+    const c = try parse_file(init, file);
     defer init.gpa.free(c.chars);
-    defer c.ops.deinit(init.gpa);
+    defer init.gpa.free(c.ops);
 
-    var s = ScratchPad{ .ops = c.ops.items };
+    var s = ScratchPad{ .ops = c.ops };
 
     for (0..c.cols) |x| {
         s.handle_endnum();
