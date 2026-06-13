@@ -126,7 +126,6 @@ fn parse_file(init: std.process.Init, file: std.Io.File) !FileContents {
 const ScratchPad = struct {
     total: u64 = 0,
     product: u64 = 1,
-    subtotal: u64 = 0,
     current: ?u64 = null,
     opIndex: usize = 0,
     ops: []Operator,
@@ -147,7 +146,7 @@ const ScratchPad = struct {
         if (self.current) |num| {
             switch (self.op()) {
                 .plus => {
-                    self.subtotal += num;
+                    self.total += num;
                 },
                 .times => {
                     self.product *= num;
@@ -164,10 +163,6 @@ const ScratchPad = struct {
             self.product = 1;
         }
 
-        if (self.op() == .plus) {
-            self.total += self.subtotal;
-            self.subtotal = 0;
-        }
         self.opIndex += 1;
     }
 };
