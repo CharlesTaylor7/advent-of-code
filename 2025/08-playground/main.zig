@@ -49,16 +49,17 @@ fn parse_part(arg: []const u8) !Part {
 // heap select on 1000 pairs
 // then heap select on the 3 circuits
 
-const Coordinate = u10;
+const Coordinate = i18;
+const Num = i64;
 const Point = packed struct {
     x: Coordinate,
     y: Coordinate,
     z: Coordinate,
 
-    fn distance_squared(self: Point, other: Point) u32 {
-        const dx: u32 = self.x - other.x;
-        const dy: u32 = self.y - other.y;
-        const dz: u32 = self.z - other.z;
+    fn distance_squared(self: Point, other: Point) Num {
+        const dx: Num = self.x - other.x;
+        const dy: Num = self.y - other.y;
+        const dz: Num = self.z - other.z;
         return dx * dx + dy * dy + dz * dz;
     }
 };
@@ -67,21 +68,96 @@ const PointList = std.array_list.Aligned(Point, null);
 const Pair = packed struct {
     i: usize,
     j: usize,
-    dist: u32,
+    dist: Num,
 };
-const Heap = std.array_list.Aligned(Pair, null);
+
+const HeapList = std.array_list.Aligned(Pair, null);
+
+// a heap to store the 1000 shortest connections
+// the root of the heap is the largest of the shortest connections
+const Heap = struct {
+    data: HeapList,
+
+    fn init(gpa: anytype) !Heap {
+        return .{
+            .data = try HeapList.initCapacity(gpa, 1000),
+        };
+    }
+    fn deinit(self: *Heap, gpa: anytype) void {
+        self.data.deinit(gpa);
+    }
+
+    fn insert(self: *Heap, pair: Pair) !void {
+        // room for more: append to end
+        if (self.data.capacity > self.data.items.len) {
+            self.data.appendAssumeCapacity(pair);
+            self._trickle_down();
+        }
+        // less than the greatest -> Replace the root
+        else if (pair.dist < self.data.items[0].dist) {
+            self.data.items[0] = pair;
+            self._trickle_up();
+        }
+    }
+
+    fn _trickle_down(self: *Heap) void {
+        var k = self.data.items.len - 1;
+        var temp: Pair = undefined;
+        while (k > 0) {
+            const next = (k - 1) / 2;
+            if (self.data.items[k].dist > self.data.items[next].dist) {
+                // swap
+                temp = self.data.items[k];
+                self.data.items[k] = self.data.items[next];
+                self.data.items[next] = temp;
+            } else {
+                break;
+            }
+            k = next;
+        }
+    }
+
+    fn debug_print(self: *const Heap) void {
+        var i: usize = 0;
+        var powerOfTwo: usize = 2;
+        while (i < self.data.items.len) {
+            if (i == powerOfTwo - 1) {
+                std.debug.print("\n", .{});
+                powerOfTwo *= 2;
+            }
+
+            std.debug.print("{d} ", .{self.data.items[i].dist});
+            i += 1;
+        }
+    }
+
+    fn _trickle_up(self: *Heap) void {
+        self.debug_print();
+        unreachable;
+    }
+};
 
 fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     _ = part;
-    const points = parse_file(init, file);
+    var points = try parse_file(init, file);
     defer points.deinit(init.gpa);
 
-    var pairs = try init.gpa.alloc(Pair, 1000);
+    var pairs = try Heap.init(init.gpa);
+    defer pairs.deinit(init.gpa);
     _ = &pairs;
+    const n = points.items.len;
+    for (0..n) |i| {
+        for (i + 1..n) |j| {
+            const d = points.items[i].distance_squared(points.items[j]);
+            const pair = Pair{ .i = i, .j = j, .dist = d };
+            try pairs.insert(pair);
+        }
+    }
+    return 32;
 }
 
-fn parse_int(buffer: ?[]u8) !Coordinate {
-    return try std.fmt.parseInt(Coordinate, buffer orelse error.MissingArg, 10);
+fn parse_int(buffer: ?[]const u8) !Coordinate {
+    return try std.fmt.parseInt(Coordinate, buffer orelse return error.MissingArg, 10);
 }
 
 fn parse_file(init: std.process.Init, file: std.Io.File) !PointList {
