@@ -184,38 +184,56 @@ const CircuitList = std.array_list.Aligned(Circuit, null);
 const CircuitLookup = std.hash_map.AutoHashMap(usize, *Circuit);
 
 const Circuits = struct {
-    alloc: *std.mem.Allocator,
+    alloc: std.mem.Allocator,
     // single elements don't get a circuit
     list: CircuitList,
     lookup: CircuitLookup,
 
-    fn init(alloc: *std.mem.Allocator) !Circuits {
+    fn init(alloc: std.mem.Allocator) !Circuits {
         return .{
             .alloc = alloc,
             .list = try CircuitList.initCapacity(alloc, 100),
-            .lookup = try CircuitLookup.initCapacity(alloc, 100),
+            .lookup = CircuitLookup.init(alloc),
         };
     }
 
     fn free(self: *Circuits) void {
+        for (0..self.list.items.len) |i| {
+            self.list.items[i].deinit();
+        }
         self.list.deinit(self.alloc);
-        self.lookup.deinit(self.alloc);
+        self.lookup.clearAndFree();
     }
 
     fn link_circuits(self: *Circuits, i: usize, j: usize) !void {
-
-        // if (self.lookup[i] == self.lookup[j]) {
-        //     return;
-        // }
-
         const a = self.lookup.get(i);
         const b = self.lookup.get(j);
+        // create a new set
         if (a == null and b == null) {
-            var set = try Circuit.init(self.alloc);
-            set.insert(i, {});
-            set.insert(j, {});
-        } else if (a == null and b) |set| {
-            set.insert(i, {});
+            var set = Circuit.init(self.alloc);
+            try set.put(i, {});
+            try set.put(j, {});
+            try self.list.append(self.alloc, set);
+            try self.lookup.put(i, &set);
+            try self.lookup.put(j, &set);
+            // merge sets
+        } else if (a != null and b != null and a != b) {
+            var iter = a.?.keyIterator();
+            while (iter.next()) |key| {
+                try b.?.put(key.*, {});
+                try self.lookup.put(key.*, b.?);
+            }
+            // a is now empty, (but not null)
+            // every lookup pointing to it should be pointing to b now
+            a.?.clearAndFree();
+            // insert singleton into existing
+        } else if (b) |set| {
+            try set.put(i, {});
+            try self.lookup.put(i, set);
+            // insert singleton into existing
+        } else if (a) |set| {
+            try set.put(j, {});
+            try self.lookup.put(j, set);
         }
     }
 };
@@ -238,6 +256,10 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     }
 
     var circuits = try Circuits.init(init.gpa);
+    defer circuits.free();
+    for (pairs.data.items) |pair| {
+        try circuits.link_circuits(pair.i, pair.j);
+    }
     return 32;
 }
 
