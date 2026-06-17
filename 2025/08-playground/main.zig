@@ -78,9 +78,9 @@ const HeapList = std.array_list.Aligned(Pair, null);
 const Heap = struct {
     data: HeapList,
 
-    fn init(gpa: anytype) !Heap {
+    fn init(alloc: std.mem.Allocator) !Heap {
         return .{
-            .data = try HeapList.initCapacity(gpa, 1000),
+            .data = try HeapList.initCapacity(alloc, 1000),
         };
     }
     fn deinit(self: *Heap, gpa: anytype) void {
@@ -105,7 +105,9 @@ const Heap = struct {
         var temp: Pair = undefined;
         while (k > 0) {
             const next = (k - 1) / 2;
-            if (self.data.items[k].dist > self.data.items[next].dist) {
+            const a = self.data.items[k];
+            const b = self.data.items[next];
+            if (a.dist > b.dist) {
                 // swap
                 temp = self.data.items[k];
                 self.data.items[k] = self.data.items[next];
@@ -116,8 +118,50 @@ const Heap = struct {
             k = next;
         }
     }
+    fn _trickle_up(self: *Heap) void {
+        var k: usize = 0;
+
+        var temp: Pair = undefined;
+        while (true) {
+            const left = 2 * k + 1;
+            const right = 2 * k + 2;
+            if (left >= self.data.items.len) {
+                break;
+            }
+            // compare and swap left
+            if (right == self.data.items.len or self.data.items[left].dist > self.data.items[right].dist) {
+                const a = self.data.items[k];
+                const b = self.data.items[left];
+                if (a.dist < b.dist) {
+                    // swap
+                    temp = self.data.items[k];
+                    self.data.items[k] = self.data.items[left];
+                    self.data.items[left] = temp;
+                    k = left;
+                } else {
+                    break;
+                }
+            }
+
+            // compare and swap right
+            else {
+                const a = self.data.items[k];
+                const b = self.data.items[right];
+                if (a.dist < b.dist) {
+                    // swap
+                    temp = self.data.items[k];
+                    self.data.items[k] = self.data.items[right];
+                    self.data.items[right] = temp;
+                    k = right;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
 
     fn debug_print(self: *const Heap) void {
+        std.debug.print("\n", .{});
         var i: usize = 0;
         var powerOfTwo: usize = 2;
         while (i < self.data.items.len) {
@@ -129,11 +173,50 @@ const Heap = struct {
             std.debug.print("{d} ", .{self.data.items[i].dist});
             i += 1;
         }
+
+        std.debug.print("\n", .{});
+    }
+};
+
+// a hash set
+const Circuit = std.hash_map.AutoHashMap(usize, void);
+const CircuitList = std.array_list.Aligned(Circuit, null);
+const CircuitLookup = std.hash_map.AutoHashMap(usize, *Circuit);
+
+const Circuits = struct {
+    alloc: *std.mem.Allocator,
+    // single elements don't get a circuit
+    list: CircuitList,
+    lookup: CircuitLookup,
+
+    fn init(alloc: *std.mem.Allocator) !Circuits {
+        return .{
+            .alloc = alloc,
+            .list = try CircuitList.initCapacity(alloc, 100),
+            .lookup = try CircuitLookup.initCapacity(alloc, 100),
+        };
     }
 
-    fn _trickle_up(self: *Heap) void {
-        self.debug_print();
-        unreachable;
+    fn free(self: *Circuits) void {
+        self.list.deinit(self.alloc);
+        self.lookup.deinit(self.alloc);
+    }
+
+    fn link_circuits(self: *Circuits, i: usize, j: usize) !void {
+
+        // if (self.lookup[i] == self.lookup[j]) {
+        //     return;
+        // }
+
+        const a = self.lookup.get(i);
+        const b = self.lookup.get(j);
+        if (a == null and b == null) {
+            var set = try Circuit.init(self.alloc);
+            set.insert(i, {});
+            set.insert(j, {});
+        } else if (a == null and b) |set| {
+            set.insert(i, {});
+        }
     }
 };
 
@@ -153,6 +236,8 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
             try pairs.insert(pair);
         }
     }
+
+    var circuits = try Circuits.init(init.gpa);
     return 32;
 }
 
