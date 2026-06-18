@@ -88,7 +88,6 @@ const CircuitPair = packed struct {
     j: usize,
 };
 
-// sort order
 pub const HeapKind = enum { min, max };
 pub const HeapType = struct {
     key: type,
