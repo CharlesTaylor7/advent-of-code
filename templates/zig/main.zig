@@ -33,7 +33,27 @@ fn parse_part(arg: []const u8) !Part {
 }
 
 fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
-    _ = part;
+    return switch (part) {
+        .one => part1(init, file),
+        .two => part2(init, file),
+    };
+}
+
+fn part1(init: std.process.Init, file: std.Io.File) !u64 {
+    {
+        const buffer = try init.gpa.alloc(u8, 1024);
+        defer init.gpa.free(buffer);
+        defer file.close(init.io);
+
+        var reader = file.reader(init.io, buffer);
+        while (try reader.interface.takeDelimiter('\n')) |line| {
+            _ = line;
+        }
+    }
+    return 42;
+}
+
+fn part2(init: std.process.Init, file: std.Io.File) !u64 {
     {
         const buffer = try init.gpa.alloc(u8, 1024);
         defer init.gpa.free(buffer);
