@@ -2,13 +2,17 @@ const std = @import("std");
 const ArrayList = std.array_list.Aligned;
 const AocError = error{ NotImplemented, InvalidPart, MissingArg, InvalidRange };
 const Part = enum { one, two };
-const Args = struct { part: Part, filename: []const u8 };
+const Args = struct {
+    part: Part,
+    filename: []const u8,
+    connections: usize,
+};
 
 pub fn main(init: std.process.Init) !void {
     const args = try parse_args(init.minimal.args);
 
     const file = try std.Io.Dir.cwd().openFile(init.io, args.filename, .{});
-    const answer = try solve(init, file, args.part);
+    const answer = try solve(init, file, args.part, args.connections);
     const buffer = try init.gpa.alloc(u8, 1024);
     defer init.gpa.free(buffer);
 
@@ -23,7 +27,16 @@ fn parse_args(passedArgs: std.process.Args) !Args {
     const filename = args.next() orelse return AocError.MissingArg;
     const rawPart = args.next() orelse return AocError.MissingArg;
     const part = try parse_part(rawPart);
-    return .{ .part = part, .filename = filename };
+
+    const c = if (args.next()) |n|
+        try std.fmt.parseInt(usize, n, 10)
+    else
+        1000;
+    return .{
+        .part = part,
+        .filename = filename,
+        .connections = c,
+    };
 }
 
 fn parse_part(arg: []const u8) !Part {
@@ -93,7 +106,7 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
             self.data.deinit(gpa);
         }
 
-        fn insert(self: *Self, key: Key, value: Val) !void {
+        fn insert_limited(self: *Self, key: Key, value: Val) !void {
             const pair = HeapEntry{ .key = key, .val = value };
             // room for more: append to end
             if (self.data.capacity > self.data.items.len) {
@@ -105,6 +118,26 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
                 self.data.items[0] = pair;
                 self._trickle_up();
             }
+        }
+
+        fn insert(self: *Self, alloc: std.mem.Allocator, key: Key, value: Val) !void {
+            const pair = HeapEntry{ .key = key, .val = value };
+            self.data.append(alloc, pair);
+            self._trickle_down();
+        }
+
+        fn replace_root(self: *Self, key: Key, val: Val) void {
+            self.data.items[0] = HeapEntry{ .key = key, .val = val };
+            self._trickle_up();
+        }
+
+        fn extract_root(self: *Self) !HeapEntry {
+            if (self.data.items.len == 0) return error.EmptyHeap;
+            const entry = self.data.items[0];
+            // 1: remove root
+            // 2: move last element to root
+            // 3: trickle up to restore heap property
+            return entry;
         }
 
         fn _trickle_down(self: *Self) void {
@@ -249,19 +282,29 @@ const Circuits = struct {
     }
 };
 
-fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
-    _ = part;
+fn solve(init: std.process.Init, file: std.Io.File, part: Part, connections: usize) !u64 {
+    return switch (part) {
+        .one => part1(init, file, connections),
+        .two => part2(init, file),
+    };
+}
+fn part2(init: std.process.Init, file: std.Io.File) !u64 {
+    _ = init;
+    _ = file;
+    return error.not_implemented;
+}
+fn part1(init: std.process.Init, file: std.Io.File, connections: usize) !u64 {
     var points = try parse_file(init, file);
     defer points.deinit(init.gpa);
 
-    var pairs = try Heap(isize, CircuitPair).init(init.gpa, 1000);
+    var pairs = try Heap(isize, CircuitPair).init(init.gpa, connections);
     defer pairs.deinit(init.gpa);
-    _ = &pairs;
+
     const n = points.items.len;
     for (0..n) |i| {
         for (i + 1..n) |j| {
             const d = points.items[i].distance_squared(points.items[j]);
-            try pairs.insert(d, CircuitPair{ .i = i, .j = j });
+            try pairs.insert_limited(d, CircuitPair{ .i = i, .j = j });
         }
     }
 
@@ -273,12 +316,14 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
 
     var circuit_heap = try Heap(usize, usize).init(init.gpa, 3);
     for (circuits.list.items) |circuit| {
-        const len: usize = circuit.count();
-        try circuit_heap.insert(std.math.maxInt(usize) - len, len);
+        const len: usize = @max(1, circuit.count());
+        std.debug.print("{d}\n", .{len});
+        try circuit_heap.insert_limited(std.math.maxInt(usize) - len, len);
     }
     defer circuit_heap.deinit(init.gpa);
 
     const items = circuit_heap.data.items;
+    std.debug.print("{any}\n", .{circuit_heap.data.items});
 
     const result = items[0].val * items[1].val * items[2].val;
     return result;
