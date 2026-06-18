@@ -70,6 +70,10 @@ const Point = packed struct {
     y: Coordinate,
     z: Coordinate,
 
+    pub fn format(self: Point, writer: anytype) !void {
+        try writer.print("{d},{d},{d}", .{ self.x, self.y, self.z });
+    }
+
     fn distance_squared(self: Point, other: Point) Num {
         const dx: Num = self.x - other.x;
         const dy: Num = self.y - other.y;
@@ -132,13 +136,8 @@ pub fn Heap(comptime heapType: HeapType) type {
 
         fn insert(self: *Self, alloc: std.mem.Allocator, key: Key, value: Val) !void {
             const pair = HeapEntry{ .key = key, .val = value };
-            self.data.append(alloc, pair);
+            try self.data.append(alloc, pair);
             self._trickle_down();
-        }
-
-        fn replace_root(self: *Self, key: Key, val: Val) void {
-            self.data.items[0] = HeapEntry{ .key = key, .val = val };
-            self._trickle_up();
         }
 
         fn extract_root(self: *Self) !HeapEntry {
@@ -166,6 +165,7 @@ pub fn Heap(comptime heapType: HeapType) type {
                 k = next;
             }
         }
+
         fn _trickle_up(self: *Self) void {
             var k: usize = 0;
 
@@ -305,10 +305,43 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part, connections: usi
     };
 }
 fn part2(init: std.process.Init, file: std.Io.File) !u64 {
-    _ = init;
-    _ = file;
-    return error.not_implemented;
+    var points = try parse_file(init, file);
+    defer points.deinit(init.gpa);
+
+    const n = points.items.len;
+    // calculate exact number of pairs to avoid reallocating later.
+    const m = (n * (n - 1)) / 2;
+
+    var pairs = try Heap(.{ .key = isize, .val = CircuitPair, .order = .min }).init(init.gpa, m);
+    defer pairs.deinit(init.gpa);
+
+    for (0..n) |i| {
+        for (i + 1..n) |j| {
+            const d = points.items[i].distance_squared(points.items[j]);
+            try pairs.insert(init.gpa, d, CircuitPair{ .i = i, .j = j });
+        }
+    }
+
+    var circuits = try Circuits.init(init.gpa);
+    defer circuits.free();
+    while (pairs.data.items.len > 0) {
+        const pair = try pairs.extract_root();
+
+        const p1 = points.items[pair.val.i];
+        const p2 = points.items[pair.val.j];
+        std.debug.print("{f} - {f}\n", .{ p1, p2 });
+        try circuits.link_circuits(pair.val.i, pair.val.j);
+        // everything is connected.
+        // multiply last two x coordinates
+        if (circuits.lookup.get(pair.val.i).?.count() == points.items.len) {
+            const x1: usize = @intCast(points.items[pair.val.i].x);
+            const x2: usize = @intCast(points.items[pair.val.j].x);
+            return x1 * x2;
+        }
+    }
+    unreachable;
 }
+
 fn part1(init: std.process.Init, file: std.Io.File, connections: usize) !u64 {
     var points = try parse_file(init, file);
     defer points.deinit(init.gpa);
