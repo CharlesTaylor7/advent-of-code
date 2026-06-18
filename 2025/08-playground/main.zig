@@ -84,7 +84,17 @@ const CircuitPair = packed struct {
     j: usize,
 };
 
-pub fn Heap(comptime Key: type, comptime Val: type) type {
+// sort order
+pub const HeapKind = enum { min, max };
+pub const HeapType = struct {
+    key: type,
+    val: type = void,
+    order: HeapKind,
+};
+
+pub fn Heap(comptime heapType: HeapType) type {
+    const Key = heapType.key;
+    const Val = heapType.val;
     const HeapEntry = struct {
         key: Key,
         val: Val,
@@ -94,7 +104,7 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
         const Self = @This();
         const List = ArrayList(HeapEntry, null);
 
-        // the root of the heap is the largest of the mins
+        // the root of the heap is the largest for a max heap, and smallest for a min heap
         data: List,
 
         fn init(alloc: std.mem.Allocator, capacity: usize) !Self {
@@ -113,8 +123,8 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
                 self.data.appendAssumeCapacity(pair);
                 self._trickle_down();
             }
-            // less than the greatest -> Replace the root
-            else if (pair.key < self.data.items[0].key) {
+            // Replace the root
+            else if (has_priority(self.data.items[0].key, key)) {
                 self.data.items[0] = pair;
                 self._trickle_up();
             }
@@ -133,10 +143,8 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
 
         fn extract_root(self: *Self) !HeapEntry {
             if (self.data.items.len == 0) return error.EmptyHeap;
-            const entry = self.data.items[0];
-            // 1: remove root
-            // 2: move last element to root
-            // 3: trickle up to restore heap property
+            const entry = self.data.swapRemove(0);
+            self._trickle_up();
             return entry;
         }
 
@@ -145,9 +153,9 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
             var temp: HeapEntry = undefined;
             while (k > 0) {
                 const next = (k - 1) / 2;
-                const a = self.data.items[k];
-                const b = self.data.items[next];
-                if (a.key > b.key) {
+                const child = self.data.items[k];
+                const parent = self.data.items[next];
+                if (has_priority(child.key, parent.key)) {
                     // swap
                     temp = self.data.items[k];
                     self.data.items[k] = self.data.items[next];
@@ -169,10 +177,10 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
                     break;
                 }
                 // compare and swap left
-                if (right == self.data.items.len or self.data.items[left].key > self.data.items[right].key) {
-                    const a = self.data.items[k];
-                    const b = self.data.items[left];
-                    if (a.key < b.key) {
+                if (right == self.data.items.len or has_priority(self.data.items[left].key, self.data.items[right].key)) {
+                    const parent = self.data.items[k];
+                    const child = self.data.items[left];
+                    if (has_priority(child.key, parent.key)) {
                         // swap
                         temp = self.data.items[k];
                         self.data.items[k] = self.data.items[left];
@@ -185,9 +193,9 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
 
                 // compare and swap right
                 else {
-                    const a = self.data.items[k];
-                    const b = self.data.items[right];
-                    if (a.key < b.key) {
+                    const parent = self.data.items[k];
+                    const child = self.data.items[right];
+                    if (has_priority(child.key, parent.key)) {
                         // swap
                         temp = self.data.items[k];
                         self.data.items[k] = self.data.items[right];
@@ -198,6 +206,14 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
                     }
                 }
             }
+        }
+
+        // larger elements have priority in a max heap, and smaller elements in a min heap
+        fn has_priority(a: Key, b: Key) bool {
+            return switch (comptime heapType.order) {
+                .min => a < b,
+                .max => a > b,
+            };
         }
 
         fn debug_print(self: *const Self) void {
@@ -297,7 +313,7 @@ fn part1(init: std.process.Init, file: std.Io.File, connections: usize) !u64 {
     var points = try parse_file(init, file);
     defer points.deinit(init.gpa);
 
-    var pairs = try Heap(isize, CircuitPair).init(init.gpa, connections);
+    var pairs = try Heap(.{ .key = isize, .val = CircuitPair, .order = .max }).init(init.gpa, connections);
     defer pairs.deinit(init.gpa);
 
     const n = points.items.len;
@@ -314,18 +330,18 @@ fn part1(init: std.process.Init, file: std.Io.File, connections: usize) !u64 {
         try circuits.link_circuits(pair.val.i, pair.val.j);
     }
 
-    var circuit_heap = try Heap(usize, usize).init(init.gpa, 3);
+    var circuit_heap = try Heap(.{ .key = usize, .order = .min }).init(init.gpa, 3);
     for (circuits.list.items) |circuit| {
         const len: usize = @max(1, circuit.count());
         std.debug.print("{d}\n", .{len});
-        try circuit_heap.insert_limited(std.math.maxInt(usize) - len, len);
+        try circuit_heap.insert_limited(len, {});
     }
     defer circuit_heap.deinit(init.gpa);
 
     const items = circuit_heap.data.items;
     std.debug.print("{any}\n", .{circuit_heap.data.items});
 
-    const result = items[0].val * items[1].val * items[2].val;
+    const result = items[0].key * items[1].key * items[2].key;
     return result;
 }
 
