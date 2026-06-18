@@ -1,5 +1,5 @@
 const std = @import("std");
-const ArrayList = @import("std.array_list.Aligned");
+const ArrayList = std.array_list.Aligned;
 const AocError = error{ NotImplemented, InvalidPart, MissingArg, InvalidRange };
 const Part = enum { one, two };
 const Args = struct { part: Part, filename: []const u8 };
@@ -65,7 +65,7 @@ const Point = packed struct {
     }
 };
 
-const PointList = std.array_list.Aligned(Point, null);
+const PointList = ArrayList(Point, null);
 const CircuitPair = packed struct {
     i: usize,
     j: usize,
@@ -79,7 +79,7 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
 
     return struct {
         const Self = @This();
-        const List = std.array_list.Aligned(HeapEntry, null);
+        const List = ArrayList(HeapEntry, null);
 
         // the root of the heap is the largest of the mins
         data: List,
@@ -188,7 +188,7 @@ pub fn Heap(comptime Key: type, comptime Val: type) type {
 
 // a hash set
 const Circuit = std.hash_map.AutoHashMap(usize, void);
-const CircuitList = std.array_list.Aligned(Circuit, null);
+const CircuitList = ArrayList(*Circuit, null);
 const CircuitLookup = std.hash_map.AutoHashMap(usize, *Circuit);
 
 const Circuits = struct {
@@ -207,7 +207,9 @@ const Circuits = struct {
 
     fn free(self: *Circuits) void {
         for (0..self.list.items.len) |i| {
-            self.list.items[i].deinit();
+            const circuit = self.list.items[i];
+            circuit.deinit();
+            self.alloc.destroy(circuit);
         }
         self.list.deinit(self.alloc);
         self.lookup.clearAndFree();
@@ -218,12 +220,13 @@ const Circuits = struct {
         const b = self.lookup.get(j);
         // create a new set
         if (a == null and b == null) {
-            var set = Circuit.init(self.alloc);
+            var set = try self.alloc.create(Circuit);
+            set.* = Circuit.init(self.alloc);
             try set.put(i, {});
             try set.put(j, {});
             try self.list.append(self.alloc, set);
-            try self.lookup.put(i, &set);
-            try self.lookup.put(j, &set);
+            try self.lookup.put(i, set);
+            try self.lookup.put(j, set);
             // merge sets
         } else if (a != null and b != null and a != b) {
             var iter = a.?.keyIterator();
@@ -271,16 +274,13 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     var circuit_heap = try Heap(usize, usize).init(init.gpa, 3);
     for (circuits.list.items) |circuit| {
         const len: usize = circuit.count();
-        std.debug.print("{d}\n", .{len});
         try circuit_heap.insert(std.math.maxInt(usize) - len, len);
     }
     defer circuit_heap.deinit(init.gpa);
 
     const items = circuit_heap.data.items;
 
-    std.debug.print("{any}\n", .{items});
     const result = items[0].val * items[1].val * items[2].val;
-    std.debug.print("{d}\n", .{result});
     return result;
 }
 
