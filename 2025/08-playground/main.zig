@@ -1,4 +1,5 @@
 const std = @import("std");
+const ArrayList = @import("std.array_list.Aligned");
 const AocError = error{ NotImplemented, InvalidPart, MissingArg, InvalidRange };
 const Part = enum { one, two };
 const Args = struct { part: Part, filename: []const u8 };
@@ -65,118 +66,125 @@ const Point = packed struct {
 };
 
 const PointList = std.array_list.Aligned(Point, null);
-const Pair = packed struct {
+const CircuitPair = packed struct {
     i: usize,
     j: usize,
-    dist: Num,
 };
 
-const HeapList = std.array_list.Aligned(Pair, null);
+pub fn Heap(comptime Key: type, comptime Val: type) type {
+    const HeapEntry = struct {
+        key: Key,
+        val: Val,
+    };
 
-// a heap to store the 1000 shortest connections
-// the root of the heap is the largest of the shortest connections
-const Heap = struct {
-    data: HeapList,
+    return struct {
+        const Self = @This();
+        const List = std.array_list.Aligned(HeapEntry, null);
 
-    fn init(alloc: std.mem.Allocator) !Heap {
-        return .{
-            .data = try HeapList.initCapacity(alloc, 1000),
-        };
-    }
-    fn deinit(self: *Heap, gpa: anytype) void {
-        self.data.deinit(gpa);
-    }
+        // the root of the heap is the largest of the mins
+        data: List,
 
-    fn insert(self: *Heap, pair: Pair) !void {
-        // room for more: append to end
-        if (self.data.capacity > self.data.items.len) {
-            self.data.appendAssumeCapacity(pair);
-            self._trickle_down();
+        fn init(alloc: std.mem.Allocator, capacity: usize) !Self {
+            return .{
+                .data = try List.initCapacity(alloc, capacity),
+            };
         }
-        // less than the greatest -> Replace the root
-        else if (pair.dist < self.data.items[0].dist) {
-            self.data.items[0] = pair;
-            self._trickle_up();
+        fn deinit(self: *Self, gpa: std.mem.Allocator) void {
+            self.data.deinit(gpa);
         }
-    }
 
-    fn _trickle_down(self: *Heap) void {
-        var k = self.data.items.len - 1;
-        var temp: Pair = undefined;
-        while (k > 0) {
-            const next = (k - 1) / 2;
-            const a = self.data.items[k];
-            const b = self.data.items[next];
-            if (a.dist > b.dist) {
-                // swap
-                temp = self.data.items[k];
-                self.data.items[k] = self.data.items[next];
-                self.data.items[next] = temp;
-            } else {
-                break;
+        fn insert(self: *Self, key: Key, value: Val) !void {
+            const pair = HeapEntry{ .key = key, .val = value };
+            // room for more: append to end
+            if (self.data.capacity > self.data.items.len) {
+                self.data.appendAssumeCapacity(pair);
+                self._trickle_down();
             }
-            k = next;
-        }
-    }
-    fn _trickle_up(self: *Heap) void {
-        var k: usize = 0;
-
-        var temp: Pair = undefined;
-        while (true) {
-            const left = 2 * k + 1;
-            const right = 2 * k + 2;
-            if (left >= self.data.items.len) {
-                break;
+            // less than the greatest -> Replace the root
+            else if (pair.key < self.data.items[0].key) {
+                self.data.items[0] = pair;
+                self._trickle_up();
             }
-            // compare and swap left
-            if (right == self.data.items.len or self.data.items[left].dist > self.data.items[right].dist) {
+        }
+
+        fn _trickle_down(self: *Self) void {
+            var k = self.data.items.len - 1;
+            var temp: HeapEntry = undefined;
+            while (k > 0) {
+                const next = (k - 1) / 2;
                 const a = self.data.items[k];
-                const b = self.data.items[left];
-                if (a.dist < b.dist) {
+                const b = self.data.items[next];
+                if (a.key > b.key) {
                     // swap
                     temp = self.data.items[k];
-                    self.data.items[k] = self.data.items[left];
-                    self.data.items[left] = temp;
-                    k = left;
+                    self.data.items[k] = self.data.items[next];
+                    self.data.items[next] = temp;
                 } else {
                     break;
                 }
+                k = next;
             }
+        }
+        fn _trickle_up(self: *Self) void {
+            var k: usize = 0;
 
-            // compare and swap right
-            else {
-                const a = self.data.items[k];
-                const b = self.data.items[right];
-                if (a.dist < b.dist) {
-                    // swap
-                    temp = self.data.items[k];
-                    self.data.items[k] = self.data.items[right];
-                    self.data.items[right] = temp;
-                    k = right;
-                } else {
+            var temp: HeapEntry = undefined;
+            while (true) {
+                const left = 2 * k + 1;
+                const right = 2 * k + 2;
+                if (left >= self.data.items.len) {
                     break;
+                }
+                // compare and swap left
+                if (right == self.data.items.len or self.data.items[left].key > self.data.items[right].key) {
+                    const a = self.data.items[k];
+                    const b = self.data.items[left];
+                    if (a.key < b.key) {
+                        // swap
+                        temp = self.data.items[k];
+                        self.data.items[k] = self.data.items[left];
+                        self.data.items[left] = temp;
+                        k = left;
+                    } else {
+                        break;
+                    }
+                }
+
+                // compare and swap right
+                else {
+                    const a = self.data.items[k];
+                    const b = self.data.items[right];
+                    if (a.key < b.key) {
+                        // swap
+                        temp = self.data.items[k];
+                        self.data.items[k] = self.data.items[right];
+                        self.data.items[right] = temp;
+                        k = right;
+                    } else {
+                        break;
+                    }
                 }
             }
         }
-    }
 
-    fn debug_print(self: *const Heap) void {
-        std.debug.print("\n", .{});
-        var i: usize = 0;
-        var powerOfTwo: usize = 2;
-        while (i < self.data.items.len) {
-            if (i == powerOfTwo - 1) {
-                std.debug.print("\n", .{});
-                powerOfTwo *= 2;
+        fn debug_print(self: *const Self) void {
+            std.debug.print("\n", .{});
+            var i: usize = 0;
+            var powerOfTwo: usize = 2;
+            while (i < self.data.items.len) {
+                if (i == powerOfTwo - 1) {
+                    std.debug.print("\n", .{});
+                    powerOfTwo *= 2;
+                }
+
+                std.debug.print("{d} ", .{self.data.items[i].key});
+                i += 1;
             }
 
-            std.debug.print("{d} ", .{self.data.items[i].dist});
-            i += 1;
+            std.debug.print("\n", .{});
         }
-
-        std.debug.print("\n", .{});
-    }
-};
+    };
+}
 
 // a hash set
 const Circuit = std.hash_map.AutoHashMap(usize, void);
@@ -225,7 +233,7 @@ const Circuits = struct {
             }
             // a is now empty, (but not null)
             // every lookup pointing to it should be pointing to b now
-            a.?.clearAndFree();
+            a.?.clearRetainingCapacity();
             // insert singleton into existing
         } else if (b) |set| {
             try set.put(i, {});
@@ -243,24 +251,37 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     var points = try parse_file(init, file);
     defer points.deinit(init.gpa);
 
-    var pairs = try Heap.init(init.gpa);
+    var pairs = try Heap(isize, CircuitPair).init(init.gpa, 1000);
     defer pairs.deinit(init.gpa);
     _ = &pairs;
     const n = points.items.len;
     for (0..n) |i| {
         for (i + 1..n) |j| {
             const d = points.items[i].distance_squared(points.items[j]);
-            const pair = Pair{ .i = i, .j = j, .dist = d };
-            try pairs.insert(pair);
+            try pairs.insert(d, CircuitPair{ .i = i, .j = j });
         }
     }
 
     var circuits = try Circuits.init(init.gpa);
     defer circuits.free();
     for (pairs.data.items) |pair| {
-        try circuits.link_circuits(pair.i, pair.j);
+        try circuits.link_circuits(pair.val.i, pair.val.j);
     }
-    return 32;
+
+    var circuit_heap = try Heap(usize, usize).init(init.gpa, 3);
+    for (circuits.list.items) |circuit| {
+        const len: usize = circuit.count();
+        std.debug.print("{d}\n", .{len});
+        try circuit_heap.insert(std.math.maxInt(usize) - len, len);
+    }
+    defer circuit_heap.deinit(init.gpa);
+
+    const items = circuit_heap.data.items;
+
+    std.debug.print("{any}\n", .{items});
+    const result = items[0].val * items[1].val * items[2].val;
+    std.debug.print("{d}\n", .{result});
+    return result;
 }
 
 fn parse_int(buffer: ?[]const u8) !Coordinate {
