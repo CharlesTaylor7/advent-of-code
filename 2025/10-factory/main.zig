@@ -60,7 +60,6 @@ const MachinePart1 = struct {
 
         var goalie: Button = 1;
         for (line) |c| {
-            std.debug.print("c: {c}\n", .{c});
             switch (section) {
                 .goal => {
                     switch (c) {
@@ -79,8 +78,6 @@ const MachinePart1 = struct {
                         },
                         else => return error.InvalidMachine,
                     }
-
-                    std.debug.print("goal: {d}\n", .{goal});
                 },
                 .buttons => {
                     switch (c) {
@@ -90,18 +87,15 @@ const MachinePart1 = struct {
                             try buttons.append(alloc, button);
                             digits = 0;
                             button = 0;
-                            std.debug.print("buttons: {any}\n", .{buttons.items});
                         },
                         '0'...'9' => {
                             // append digit
                             digits = @intCast(c - '0');
-                            std.debug.print("digits: {any}\n", .{digits});
                         },
                         ',' => {
                             // grow button
                             button += @as(Button, 1) << digits;
                             digits = 0;
-                            std.debug.print("button: {any}\n", .{button});
                         },
 
                         '(', ' ' => {},
@@ -170,6 +164,7 @@ const MachinePart2 = struct {
     // maybe easier to work with than just u10
     const Button = [10]u1;
     const Jolt = u5;
+    const Joltage = ArrayList(Jolt);
 
     // encode in binary
     // binary
@@ -189,7 +184,6 @@ const MachinePart2 = struct {
 
         var button: Button = undefined;
         for (line) |c| {
-            std.debug.print("c: {c}\n", .{c});
             switch (section) {
                 .goal => {
                     switch (c) {
@@ -249,9 +243,50 @@ const MachinePart2 = struct {
     }
 
     pub fn solve(self: @This(), alloc: Allocator) !u64 {
-        _ = alloc;
-        std.debug.print("{any} {any}\n", .{ self.buttons.items, self.joltage.items });
-        return error.NotImplemented;
+        var a = try ArrayList(Joltage).initCapacity(alloc, self.buttons.items.len);
+        var b = try ArrayList(Joltage).initCapacity(alloc, a.capacity * a.capacity);
+        defer a.deinit(alloc);
+        defer b.deinit(alloc);
+        var initial = try Joltage.initCapacity(alloc, self.joltage.items.len);
+        for (0..initial.capacity) |_| {
+            initial.appendAssumeCapacity(0);
+        }
+
+        try a.append(alloc, initial);
+        var current: *ArrayList(Joltage) = undefined;
+        var next: *ArrayList(Joltage) = undefined;
+        var presses: u64 = 0;
+        while (true) {
+            if (presses % 2 == 0) {
+                current = &a;
+                next = &b;
+            } else {
+                current = &b;
+                next = &a;
+            }
+
+            presses += 1;
+            for (current.items) |joltage| {
+                for (self.buttons.items) |button| {
+                    const val = try add(alloc, joltage, button);
+                    if (std.mem.eql(u5, val.items, self.joltage.items)) return presses;
+                    try next.append(alloc, val);
+                }
+                @constCast(&joltage).deinit(alloc);
+            }
+
+            current.clearRetainingCapacity();
+        }
+
+        unreachable;
+    }
+    fn add(alloc: Allocator, joltage: Joltage, button: Button) !Joltage {
+        var result = try Joltage.initCapacity(alloc, joltage.items.len);
+
+        for (0..joltage.items.len) |i| {
+            result.appendAssumeCapacity(joltage.items[i] + button[i]);
+        }
+        return result;
     }
 };
 
