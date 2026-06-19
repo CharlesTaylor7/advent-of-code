@@ -43,21 +43,22 @@ fn parse_part(arg: []const u8) !Part {
 // It's all binary. We just need to figure out the numbers reachable by 1 xor, and then 2 xors etc.
 const Section = enum { goal, buttons, joltage };
 const MachinePart1 = struct {
+    const Button = u10;
     // encode in binary
     goal: u10,
     // binary
-    buttons: ArrayList(u10),
+    buttons: ArrayList(Button),
 
     // [.#.#] (0,2,3) (1,3) {11,10,11,21}
     fn parse(alloc: Allocator, line: []u8) !@This() {
         var section: Section = .goal;
-        var goal: u10 = 0;
-        var buttons = try ArrayList(u10).initCapacity(alloc, 10);
+        var goal: Button = 0;
+        var buttons = try ArrayList(Button).initCapacity(alloc, 10);
         errdefer buttons.deinit(alloc);
-        var button: u10 = 0;
+        var button: Button = 0;
         var digits: u4 = 0;
 
-        var goalie: u10 = 1;
+        var goalie: Button = 1;
         for (line) |c| {
             std.debug.print("c: {c}\n", .{c});
             switch (section) {
@@ -85,7 +86,7 @@ const MachinePart1 = struct {
                     switch (c) {
                         ')' => {
                             // grow button
-                            button += @as(u10, 1) << digits;
+                            button += @as(Button, 1) << digits;
                             try buttons.append(alloc, button);
                             digits = 0;
                             button = 0;
@@ -98,7 +99,7 @@ const MachinePart1 = struct {
                         },
                         ',' => {
                             // grow button
-                            button += @as(u10, 1) << digits;
+                            button += @as(Button, 1) << digits;
                             digits = 0;
                             std.debug.print("button: {any}\n", .{button});
                         },
@@ -164,26 +165,77 @@ const MachinePart1 = struct {
 };
 
 const MachinePart2 = struct {
+
+    // 1 button is 10 bits
+    // maybe easier to work with than just u10
+    const Button = [10]u1;
+    const Jolt = u5;
+
     // encode in binary
     // binary
-    buttons: ArrayList(u10),
-    joltage: ArrayList(u5),
+    buttons: ArrayList(Button),
+    joltage: ArrayList(Jolt),
 
     // [.#.#] (0,2,3) (1,3) {11,10,11,21}
     fn parse(alloc: Allocator, line: []u8) !@This() {
         var section: Section = .goal;
-        _ = &section;
-        var buttons = try ArrayList(u10).initCapacity(alloc, 10);
+        var buttons = try ArrayList(Button).initCapacity(alloc, 10);
         errdefer buttons.deinit(alloc);
 
-        var joltage = try ArrayList(u5).initCapacity(alloc, 10);
+        var joltage = try ArrayList(Jolt).initCapacity(alloc, 10);
         errdefer joltage.deinit(alloc);
+
+        var jolt: Jolt = 0;
+
+        var button: Button = undefined;
         for (line) |c| {
             std.debug.print("c: {c}\n", .{c});
             switch (section) {
-                .goal => {},
-                .buttons => {},
-                .joltage => {},
+                .goal => {
+                    switch (c) {
+                        '[', '.', '#', ']' => {},
+                        ' ' => {
+                            section = .buttons;
+                        },
+                        else => return error.InvalidMachine,
+                    }
+                },
+                .buttons => {
+                    switch (c) {
+                        '(' => {
+                            button = [_]u1{0} ** 10;
+                        },
+                        ')' => {
+                            try buttons.append(alloc, button);
+                        },
+
+                        '0'...'9' => {
+                            button[c - '0'] = 1;
+                        },
+                        '{' => {
+                            section = .joltage;
+                        },
+                        ' ', ',' => {},
+                        else => return error.InvalidMachine,
+                    }
+                },
+                .joltage => {
+                    switch (c) {
+                        '0'...'9' => {
+                            const d: Jolt = @intCast(c - '0');
+                            jolt = 10 * jolt + d;
+                        },
+                        ',' => {
+                            try joltage.append(alloc, jolt);
+                            jolt = 0;
+                        },
+                        '}' => {
+                            try joltage.append(alloc, jolt);
+                            break;
+                        },
+                        else => return error.InvalidMachine,
+                    }
+                },
             }
         }
         return .{
@@ -197,36 +249,9 @@ const MachinePart2 = struct {
     }
 
     pub fn solve(self: @This(), alloc: Allocator) !u64 {
-        var a = try ArrayList(u10).initCapacity(alloc, self.buttons.items.len);
-        var b = try ArrayList(u10).initCapacity(alloc, a.capacity * a.capacity);
-        defer a.deinit(alloc);
-        defer b.deinit(alloc);
-
-        try a.append(alloc, 0);
-        var current: *ArrayList(u10) = undefined;
-        var next: *ArrayList(u10) = undefined;
-        var presses: u64 = 0;
-        while (true) {
-            if (presses % 2 == 0) {
-                current = &a;
-                next = &b;
-            } else {
-                current = &b;
-                next = &a;
-            }
-
-            presses += 1;
-            for (self.buttons.items) |button| {
-                for (current.items) |item| {
-                    const val = button ^ item;
-                    if (val == self.joltage) return presses;
-                    try next.append(alloc, val);
-                }
-            }
-            current.clearRetainingCapacity();
-        }
-
-        unreachable;
+        _ = alloc;
+        std.debug.print("{any} {any}\n", .{ self.buttons.items, self.joltage.items });
+        return error.NotImplemented;
     }
 };
 
