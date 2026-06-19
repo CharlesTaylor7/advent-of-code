@@ -163,7 +163,7 @@ const MachinePart2 = struct {
     // 1 button is 10 bits
     // maybe easier to work with than just u10
     const Button = [10]u1;
-    const Jolt = u5;
+    const Jolt = u8;
     const Joltage = ArrayList(Jolt);
 
     // encode in binary
@@ -266,10 +266,15 @@ const MachinePart2 = struct {
             }
 
             presses += 1;
+            std.debug.print("{d}\n", .{presses});
             for (current.items) |joltage| {
-                for (self.buttons.items) |button| {
+                buttons: for (self.buttons.items) |button| {
                     const val = try add(alloc, joltage, button);
-                    if (std.mem.eql(u5, val.items, self.joltage.items)) return presses;
+                    if (std.mem.eql(Jolt, val.items, self.joltage.items)) return presses;
+                    for (val.items, self.joltage.items) |x, y| {
+                        // skip if we overshot the joltage
+                        if (x > y) continue :buttons;
+                    }
                     try next.append(alloc, val);
                 }
                 @constCast(&joltage).deinit(alloc);

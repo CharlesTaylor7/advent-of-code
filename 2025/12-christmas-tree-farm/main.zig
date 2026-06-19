@@ -39,6 +39,7 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     };
 }
 
+// brute force let's go!
 fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     {
         const buffer = try init.gpa.alloc(u8, 1024);
@@ -52,6 +53,19 @@ fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     }
     return 42;
 }
+
+const Shape = struct {
+fn rotate(self: @This()) void {
+        _ = self;
+        //
+    }
+};
+
+    fn rotate(self: @This()) void {
+        _ = self;
+        //
+    }
+};
 
 fn part2(init: std.process.Init, file: std.Io.File) !u64 {
     {
