@@ -3,16 +3,16 @@ const MAX_ITERATIONS = 1_000_000;
 
 /**
 /* Fibonacci Heap
- * Implementation based on 
+ * Implementation based on
  * https://en.wikipedia.org/wiki/Fibonacci_heap#Implementation_of_operations
  */
 export class FibHeap<T> {
   #min?: FibNode<T>;
   #size: number = 0;
   #debug?: boolean;
-// degree -> node
-// only maintained as part of delete min operation
-// after 2 sequential inserts, there are a multiple degree 1 roots.
+  // degree -> node
+  // only maintained as part of delete min operation
+  // after 2 sequential inserts, there are a multiple degree 1 roots.
   #roots: Map<number, FibNode<T>> = new Map();
   #insertsSinceLastDelete: number = 0;
 
@@ -35,8 +35,7 @@ export class FibHeap<T> {
       if (key < this.#min.key) {
         this.#min.prev.append(node);
         this.#min = node;
-      }
-      else {
+      } else {
         this.#min.append(node);
       }
     }
@@ -55,14 +54,14 @@ export class FibHeap<T> {
       // console.log("Empty");
       return;
     }
-    const newRootCount = this.#insertsSinceLastDelete + this.#min.degree;
+    //const newRootCount = this.#insertsSinceLastDelete + this.#min.degree;
     this.#size--;
     this.#roots.delete(this.#min.degree);
     this.#insertsSinceLastDelete = 0;
 
     // exactly 1 element
     this.log(`Phase 0:`, this.#min);
-    this.log(`Delete:`, this.#min.display())
+    this.log(`Delete:`, this.#min.display());
     if (this.#size === 0) {
       // console.log("Deleting last element");
       this.#min = undefined;

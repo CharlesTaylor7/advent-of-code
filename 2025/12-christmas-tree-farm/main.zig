@@ -40,6 +40,18 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
 }
 
 // brute force let's go!
+// alright we need to do aggressive caching and dynamic programming
+// basically if you already fit the shapes and you add a row, you're good.
+// if you add a shape, you need to try all the existing configurations right?
+// I am going to try to work for the solution because that will enhance my enjoyment of it.
+//
+// the search space is freaking massive.
+//
+// Adding a new piece means checking very previously working configuration again...
+//
+// one idea is to just place the "easy" pieces first.
+// Another is to exclude all the grids that would be too large
+// another is to see which pieces fit togeht
 fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     {
         const buffer = try init.gpa.alloc(u8, 1024);
@@ -55,11 +67,11 @@ fn part1(init: std.process.Init, file: std.Io.File) !u64 {
 }
 
 const Shape = struct {
-fn rotate(self: @This()) void {
-        _ = self;
-        //
-    }
-};
+    fn shift(self: @This()) void {
+            _ = self;
+            //
+        }
+    };
 
     fn rotate(self: @This()) void {
         _ = self;
