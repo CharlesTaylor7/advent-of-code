@@ -1,7 +1,7 @@
 const std = @import("std");
 const AocError = error{ NotImplemented, InvalidPart, MissingArg, InvalidRange };
 const Part = enum { one, two };
-const Args = struct { part: Part, filename: []const u8 };
+const Args = struct { part: Part };
 
 pub fn main(init: std.process.Init) !void {
     const args = try parse_args(init.minimal.args);
@@ -19,10 +19,9 @@ pub fn main(init: std.process.Init) !void {
 fn parse_args(passedArgs: std.process.Args) !Args {
     var args = passedArgs.iterate();
     _ = args.skip();
-    const filename = args.next() orelse return AocError.MissingArg;
     const rawPart = args.next() orelse return AocError.MissingArg;
     const part = try parse_part(rawPart);
-    return .{ .part = part, .filename = filename };
+    return .{ .part = part };
 }
 
 fn parse_part(arg: []const u8) !Part {
@@ -39,17 +38,35 @@ fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     };
 }
 
-fn part1(init: std.process.Init, file: std.Io.File) !u64 {
-    {
-        const buffer = try init.gpa.alloc(u8, 1024);
-        defer init.gpa.free(buffer);
-        defer file.close(init.io);
+const EXAMPLE: State = .{
+    .wizard_hp = 10,
+    .wizard_mana = 250,
+    .boss_hp = 13,
+    .boss_dmg = 8,
+};
+const INPUT: State = .{
+    .wizard_hp = 50,
+    .wizard_mana = 500,
+    .boss_hp = 51,
+    .boss_dmg = 9,
+};
 
-        var reader = file.reader(init.io, buffer);
-        while (try reader.interface.takeDelimiter('\n')) |line| {
-            _ = line;
+const Queue = Heap(.{ .key = u32, .val = State });
+fn part1(init: std.process.Init, state: State) !u64 {
+    const queue = Queue.init(init.gpa, 1000);
+    defer queue.deinit(init.gpa);
+
+    queue.insert(state.wizard_mana, state);
+    while (true) {
+        const root = queue.extract_root();
+        var current: State = undefined;
+        @memcpy(root, current);
+        inline for (@typeInfo(WizardSpell).@"enum".fields) |spell| {
+            const winner = current.round(spell);
+            _ = winner;
         }
     }
+
     return 42;
 }
 
@@ -75,7 +92,7 @@ const WizardSpell = enum {
     recharge,
 };
 
-const Winner = enum {
+const Winner = enum(u2) {
     wizard = 1,
     boss = 2,
 };
@@ -85,6 +102,124 @@ const RoundResult = enum {
     battle_continues,
 };
 
+const ArrayList = std.array_list.Aligned;
+pub fn Heap(comptime heapType: HeapType) type {
+    const Key = heapType.key;
+    const Val = heapType.val;
+    const HeapEntry = struct {
+        key: Key,
+        val: Val,
+    };
+
+    return struct {
+        const Self = @This();
+        data: ArrayList(HeapEntry, null),
+
+        fn init(alloc: std.mem.Allocator, capacity: usize) !Self {
+            return .{
+                .data = try List.initCapacity(alloc, capacity),
+            };
+        }
+        fn deinit(self: *Self, gpa: std.mem.Allocator) void {
+            self.data.deinit(gpa);
+        }
+
+        fn insert(self: *Self, alloc: std.mem.Allocator, key: Key, value: Val) !void {
+            const pair = HeapEntry{ .key = key, .val = value };
+            try self.data.append(alloc, pair);
+            self._trickle_down();
+        }
+
+        fn extract_root(self: *Self) !HeapEntry {
+            if (self.data.items.len == 0) return error.EmptyHeap;
+            const entry = self.data.swapRemove(0);
+            self._trickle_up();
+            return entry;
+        }
+
+        fn _trickle_down(self: *Self) void {
+            var k = self.data.items.len - 1;
+            var temp: HeapEntry = undefined;
+            while (k > 0) {
+                const next = (k - 1) / 2;
+                const child = self.data.items[k];
+                const parent = self.data.items[next];
+                if (has_priority(child.key, parent.key)) {
+                    // swap
+                    temp = self.data.items[k];
+                    self.data.items[k] = self.data.items[next];
+                    self.data.items[next] = temp;
+                } else {
+                    break;
+                }
+                k = next;
+            }
+        }
+
+        fn _trickle_up(self: *Self) void {
+            var k: usize = 0;
+
+            var temp: HeapEntry = undefined;
+            while (true) {
+                const left = 2 * k + 1;
+                const right = 2 * k + 2;
+                if (left >= self.data.items.len) {
+                    break;
+                }
+                // compare and swap left
+                if (right == self.data.items.len or has_priority(self.data.items[left].key, self.data.items[right].key)) {
+                    const parent = self.data.items[k];
+                    const child = self.data.items[left];
+                    if (has_priority(child.key, parent.key)) {
+                        // swap
+                        temp = self.data.items[k];
+                        self.data.items[k] = self.data.items[left];
+                        self.data.items[left] = temp;
+                        k = left;
+                    } else {
+                        break;
+                    }
+                }
+
+                // compare and swap right
+                else {
+                    const parent = self.data.items[k];
+                    const child = self.data.items[right];
+                    if (has_priority(child.key, parent.key)) {
+                        // swap
+                        temp = self.data.items[k];
+                        self.data.items[k] = self.data.items[right];
+                        self.data.items[right] = temp;
+                        k = right;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        fn has_priority(a: Key, b: Key) bool {
+            return a < b;
+        }
+
+        fn debug_print(self: *const Self) void {
+            std.debug.print("\n", .{});
+            var i: usize = 0;
+            var powerOfTwo: usize = 2;
+            while (i < self.data.items.len) {
+                if (i == powerOfTwo - 1) {
+                    std.debug.print("\n", .{});
+                    powerOfTwo *= 2;
+                }
+
+                std.debug.print("{d} ", .{self.data.items[i].key});
+                i += 1;
+            }
+
+            std.debug.print("\n", .{});
+        }
+    };
+}
 const State = struct {
     wizard_hp: i8,
     wizard_mana: i8,
@@ -93,6 +228,7 @@ const State = struct {
     effect_shield_turns: u8 = 0,
     effect_poison_turns: u8 = 0,
     effect_recharge_turns: u8 = 0,
+    total_mana_spent: u64 = 0,
 
     fn spell_cost(spell: WizardSpell) u8 {
         switch (spell) {
@@ -156,6 +292,10 @@ const State = struct {
             else => false,
         };
         if (effect_active) return .EffectActive;
+
+        const cost = spell_cost(spell);
+        self.wizard_mana -= cost;
+        self.total_mana_spent += cost;
 
         switch (spell) {
             .magic_missile => {
