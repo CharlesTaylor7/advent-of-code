@@ -88,13 +88,13 @@ const CircuitPair = packed struct {
     j: usize,
 };
 
-pub const HeapKind = enum { min, max };
 pub const HeapType = struct {
     key: type,
-    val: type = void,
+    val: type,
     order: HeapKind,
 };
 
+const ArrayList = std.array_list.Aligned;
 pub fn Heap(comptime heapType: HeapType) type {
     const Key = heapType.key;
     const Val = heapType.val;
@@ -105,10 +105,7 @@ pub fn Heap(comptime heapType: HeapType) type {
 
     return struct {
         const Self = @This();
-        const List = ArrayList(HeapEntry, null);
-
-        // the root of the heap is the largest for a max heap, and smallest for a min heap
-        data: List,
+        data: ArrayList(HeapEntry, null),
 
         fn init(alloc: std.mem.Allocator, capacity: usize) !Self {
             return .{
@@ -117,20 +114,6 @@ pub fn Heap(comptime heapType: HeapType) type {
         }
         fn deinit(self: *Self, gpa: std.mem.Allocator) void {
             self.data.deinit(gpa);
-        }
-
-        fn insert_limited(self: *Self, key: Key, value: Val) !void {
-            const pair = HeapEntry{ .key = key, .val = value };
-            // room for more: append to end
-            if (self.data.capacity > self.data.items.len) {
-                self.data.appendAssumeCapacity(pair);
-                self._trickle_down();
-            }
-            // Replace the root
-            else if (has_priority(self.data.items[0].key, key)) {
-                self.data.items[0] = pair;
-                self._trickle_up();
-            }
         }
 
         fn insert(self: *Self, alloc: std.mem.Allocator, key: Key, value: Val) !void {
@@ -207,12 +190,8 @@ pub fn Heap(comptime heapType: HeapType) type {
             }
         }
 
-        // larger elements have priority in a max heap, and smaller elements in a min heap
         fn has_priority(a: Key, b: Key) bool {
-            return switch (comptime heapType.order) {
-                .min => a < b,
-                .max => a > b,
-            };
+            return a < b;
         }
 
         fn debug_print(self: *const Self) void {

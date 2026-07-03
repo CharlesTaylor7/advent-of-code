@@ -6,8 +6,7 @@ const Args = struct { part: Part };
 pub fn main(init: std.process.Init) !void {
     const args = try parse_args(init.minimal.args);
 
-    const file = try std.Io.Dir.cwd().openFile(init.io, args.filename, .{});
-    const answer = try solve(init, file, args.part);
+    const answer = try solve(init, args.part);
     const buffer = try init.gpa.alloc(u8, 1024);
     defer init.gpa.free(buffer);
 
@@ -31,10 +30,10 @@ fn parse_part(arg: []const u8) !Part {
     return AocError.InvalidPart;
 }
 
-fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
+fn solve(init: std.process.Init, part: Part) !u64 {
     return switch (part) {
-        .one => part1(init, file),
-        .two => part2(init, file),
+        .one => part1(init, EXAMPLE),
+        .two => return error.not_implemented,
     };
 }
 
@@ -51,19 +50,29 @@ const INPUT: State = .{
     .boss_dmg = 9,
 };
 
-const Queue = Heap(.{ .key = u32, .val = State });
+const Queue = Heap(.{ .key = u64, .val = State });
 fn part1(init: std.process.Init, state: State) !u64 {
-    const queue = Queue.init(init.gpa, 1000);
+    var queue = try Queue.init(init.gpa, 1000);
     defer queue.deinit(init.gpa);
 
-    queue.insert(state.wizard_mana, state);
-    while (true) {
-        const root = queue.extract_root();
-        var current: State = undefined;
-        @memcpy(root, current);
-        inline for (@typeInfo(WizardSpell).@"enum".fields) |spell| {
-            const winner = current.round(spell);
-            _ = winner;
+    try queue.insert(init.gpa, state.total_mana_spent, state);
+    while (queue.data.items.len > 0) {
+        const root = try queue.extract_root();
+        for (std.enums.values(WizardSpell)) |spell| {
+            // copy the state
+            var current: State = root.val;
+            const winner = current.round(spell) catch continue;
+            if (winner) |win| {
+                switch (win) {
+                    .boss => continue,
+                    .wizard => {
+                        std.debug.print("{}\n", .{state});
+                        return state.total_mana_spent;
+                    },
+                }
+            } else {
+                try queue.insert(init.gpa, current.total_mana_spent, current);
+            }
         }
     }
 
@@ -103,6 +112,10 @@ const RoundResult = enum {
 };
 
 const ArrayList = std.array_list.Aligned;
+const HeapType = struct {
+    key: type,
+    val: type,
+};
 pub fn Heap(comptime heapType: HeapType) type {
     const Key = heapType.key;
     const Val = heapType.val;
@@ -113,11 +126,13 @@ pub fn Heap(comptime heapType: HeapType) type {
 
     return struct {
         const Self = @This();
-        data: ArrayList(HeapEntry, null),
+
+        const Storage = ArrayList(HeapEntry, null);
+        data: Storage,
 
         fn init(alloc: std.mem.Allocator, capacity: usize) !Self {
             return .{
-                .data = try List.initCapacity(alloc, capacity),
+                .data = try Storage.initCapacity(alloc, capacity),
             };
         }
         fn deinit(self: *Self, gpa: std.mem.Allocator) void {
@@ -222,7 +237,7 @@ pub fn Heap(comptime heapType: HeapType) type {
 }
 const State = struct {
     wizard_hp: i8,
-    wizard_mana: i8,
+    wizard_mana: i32,
     boss_hp: i8,
     boss_dmg: i8,
     effect_shield_turns: u8 = 0,
@@ -231,13 +246,13 @@ const State = struct {
     total_mana_spent: u64 = 0,
 
     fn spell_cost(spell: WizardSpell) u8 {
-        switch (spell) {
+        return switch (spell) {
             .magic_missile => 53,
             .drain => 73,
             .shield => 113,
             .poison => 173,
             .recharge => 229,
-        }
+        };
     }
 
     fn check_winner(self: State) ?Winner {
@@ -246,7 +261,7 @@ const State = struct {
         return null;
     }
 
-    fn round(self: State, spell: WizardSpell) !?Winner {
+    fn round(self: *@This(), spell: WizardSpell) !?Winner {
         try self.cast_spell(spell);
         if (self.check_winner()) |win| return win;
 
@@ -262,14 +277,14 @@ const State = struct {
         return null;
     }
 
-    fn boss_attacks(self: @This()) void {
-        const armor = if (self.effect_shield_turns > 0) 7 else 0;
+    fn boss_attacks(self: *@This()) void {
+        const armor: i8 = if (self.effect_shield_turns > 0) 7 else 0;
         if (armor <= self.boss_dmg) {
             self.wizard_hp -= self.boss_dmg - armor;
         }
     }
 
-    fn effects_tick(self: @This()) void {
+    fn effects_tick(self: *@This()) void {
         if (self.effect_shield_turns > 0) {
             self.effect_shield_turns -= 1;
         }
@@ -278,20 +293,20 @@ const State = struct {
             self.boss_hp -= 3;
         }
         if (self.effect_recharge_turns > 0) {
-            self.effect_recharge_turns_turns -= 1;
+            self.effect_recharge_turns -= 1;
             self.wizard_mana += 101;
         }
     }
 
     fn cast_spell(self: *@This(), spell: WizardSpell) !void {
-        if (self.wizard_mana < spell_cost()) return .NotEnoughMana;
+        if (self.wizard_mana < spell_cost(spell)) return error.NotEnoughMana;
         const effect_active = switch (spell) {
             .shield => self.effect_shield_turns > 0,
             .poison => self.effect_poison_turns > 0,
             .recharge => self.effect_recharge_turns > 0,
             else => false,
         };
-        if (effect_active) return .EffectActive;
+        if (effect_active) return error.EffectActive;
 
         const cost = spell_cost(spell);
         self.wizard_mana -= cost;
