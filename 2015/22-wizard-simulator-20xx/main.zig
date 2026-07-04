@@ -31,27 +31,11 @@ fn parse_part(arg: []const u8) !Part {
 }
 
 fn solve(init: std.process.Init, part: Part) !u64 {
-    return switch (part) {
-        .one => part1(init, EXAMPLE),
-        .two => return error.not_implemented,
+    const state = switch (part) {
+        .one => EASY,
+        .two => HARD,
     };
-}
 
-const EXAMPLE: State = .{
-    .wizard_hp = 10,
-    .wizard_mana = 250,
-    .boss_hp = 13,
-    .boss_dmg = 8,
-};
-const INPUT: State = .{
-    .wizard_hp = 50,
-    .wizard_mana = 500,
-    .boss_hp = 51,
-    .boss_dmg = 9,
-};
-
-const Queue = Heap(.{ .key = u64, .val = State });
-fn part1(init: std.process.Init, state: State) !u64 {
     var queue = try Queue.init(init.gpa, 1000);
     defer queue.deinit(init.gpa);
 
@@ -66,8 +50,7 @@ fn part1(init: std.process.Init, state: State) !u64 {
                 switch (win) {
                     .boss => continue,
                     .wizard => {
-                        std.debug.print("{}\n", .{state});
-                        return state.total_mana_spent;
+                        return current.total_mana_spent;
                     },
                 }
             } else {
@@ -76,22 +59,25 @@ fn part1(init: std.process.Init, state: State) !u64 {
         }
     }
 
-    return 42;
+    return error.PlayerAlwaysLoses;
 }
 
-fn part2(init: std.process.Init, file: std.Io.File) !u64 {
-    {
-        const buffer = try init.gpa.alloc(u8, 1024);
-        defer init.gpa.free(buffer);
-        defer file.close(init.io);
+const EASY: State = .{
+    .mode = .easy,
+    .wizard_hp = 50,
+    .wizard_mana = 500,
+    .boss_hp = 51,
+    .boss_dmg = 9,
+};
+const HARD: State = .{
+    .mode = .hard,
+    .wizard_hp = 50,
+    .wizard_mana = 500,
+    .boss_hp = 51,
+    .boss_dmg = 9,
+};
 
-        var reader = file.reader(init.io, buffer);
-        while (try reader.interface.takeDelimiter('\n')) |line| {
-            _ = line;
-        }
-    }
-    return 42;
-}
+const Queue = Heap(.{ .key = u64, .val = State });
 
 const WizardSpell = enum {
     magic_missile,
@@ -216,26 +202,11 @@ pub fn Heap(comptime heapType: HeapType) type {
         fn has_priority(a: Key, b: Key) bool {
             return a < b;
         }
-
-        fn debug_print(self: *const Self) void {
-            std.debug.print("\n", .{});
-            var i: usize = 0;
-            var powerOfTwo: usize = 2;
-            while (i < self.data.items.len) {
-                if (i == powerOfTwo - 1) {
-                    std.debug.print("\n", .{});
-                    powerOfTwo *= 2;
-                }
-
-                std.debug.print("{d} ", .{self.data.items[i].key});
-                i += 1;
-            }
-
-            std.debug.print("\n", .{});
-        }
     };
 }
-const State = struct {
+const GameMode = enum(u1) { easy, hard };
+const State = packed struct {
+    mode: GameMode,
     wizard_hp: i8,
     wizard_mana: i32,
     boss_hp: i8,
@@ -262,6 +233,14 @@ const State = struct {
     }
 
     fn round(self: *@This(), spell: WizardSpell) !?Winner {
+        if (self.mode == .hard) {
+            self.wizard_hp -= 1;
+            if (self.check_winner()) |win| return win;
+        }
+
+        self.effects_tick();
+        if (self.check_winner()) |win| return win;
+
         try self.cast_spell(spell);
         if (self.check_winner()) |win| return win;
 
@@ -269,9 +248,6 @@ const State = struct {
         if (self.check_winner()) |win| return win;
 
         self.boss_attacks();
-        if (self.check_winner()) |win| return win;
-
-        self.effects_tick();
         if (self.check_winner()) |win| return win;
 
         return null;
