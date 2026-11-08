@@ -32,6 +32,15 @@ fn parse_part(arg: []const u8) !Part {
     return AocError.InvalidPart;
 }
 
+fn parseOffset(arg: []const u8) !i8 {
+    return std.fmt.parseInt(i8, arg, 10) catch  {
+
+        std.debug.print("{s}\n", .{arg});
+        std.debug.print("{d}\n", .{arg.len});
+        return error.InvalidOffset;
+    };
+}
+
 fn solve(init: std.process.Init, file: std.Io.File, part: Part) !u64 {
     return switch (part) {
         .one => part1(init, file),
@@ -48,7 +57,9 @@ fn parse(init: std.process.Init, file: std.Io.File) !State {
     var program = try std.array_list.Aligned(Instruction, null).initCapacity(init.gpa, 100);
 
     while (try reader.interface.takeDelimiter('\n')) |line| {
-        var iterator = std.mem.splitAny(u8, line, " ,");
+        var iterator = std.mem.splitAny(u8, line, " ,+");
+
+        std.debug.print("{s}\n", .{line});
         const code = std.meta.stringToEnum(Code, iterator.next() orelse return error.InvalidInstruction) orelse return error.InvalidInstruction;
 
         var register: Register = .a;
@@ -56,15 +67,21 @@ fn parse(init: std.process.Init, file: std.Io.File) !State {
         switch (code) {
             .jmp => {
                 const rawOffset = iterator.next() orelse return error.InvalidInstruction;
-                offset = try std.fmt.parseInt(i8, rawOffset, 10);
+                offset = try parseOffset(rawOffset);
             },
 
             .jio, .jie => {
                 const rawRegister = iterator.next() orelse return error.InvalidInstruction;
+        std.debug.print("{s}\n", .{rawRegister});
+                
                 register = std.meta.stringToEnum(Register, rawRegister) orelse return error.InvalidInstruction;
 
-                const rawOffset = iterator.next() orelse return error.InvalidInstruction;
-                offset = try std.fmt.parseInt(i8, rawOffset, 10);
+                const rawOffset = while (true) {
+                    const raw = iterator.next() orelse return error.InvalidInstruction;
+                    if (raw.len > 0) break raw;
+                };
+                    
+                offset = try parseOffset(rawOffset);
             },
             .inc, .hlf, .tpl => {
                 const rawRegister = iterator.next() orelse return error.InvalidInstruction;
