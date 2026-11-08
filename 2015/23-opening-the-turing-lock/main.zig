@@ -72,7 +72,6 @@ fn parse(init: std.process.Init, file: std.Io.File) !State {
 
             .jio, .jie => {
                 const rawRegister = iterator.next() orelse return error.InvalidInstruction;
-        std.debug.print("{s}\n", .{rawRegister});
                 
                 register = std.meta.stringToEnum(Register, rawRegister) orelse return error.InvalidInstruction;
 
@@ -105,6 +104,7 @@ fn parse(init: std.process.Init, file: std.Io.File) !State {
 
 fn part1(init: std.process.Init, file: std.Io.File) !u64 {
     var state = try parse(init, file);
+    defer init.gpa.free(state.program);
     return state.execute();
 }
 
